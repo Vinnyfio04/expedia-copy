@@ -59,3 +59,9 @@ npm run lint
 npm test
 npm run build
 ```
+
+## Project context
+
+- [Design and request pipeline](docs/design-pipeline.md)
+- [Selected project prompts](prompts/)
+- Project handoffs belong in `handoffs/` when that directory is created.
