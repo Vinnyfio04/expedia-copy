@@ -55,6 +55,15 @@ assignment1/
 |       |-- 03-data-and-logic.png
 |       |-- 04-four-layer-system-map.png
 |       `-- relationships.png
+|-- handoffs/
+|   `-- current.md
+|-- prompts/
+|   |-- 01-plan-the-implementation.md
+|   |-- 02-build-the-csv-search-api.md
+|   |-- 03-build-the-vue-hotel-search.md
+|   |-- 04-review-and-create-the-part1-checkpoint.md
+|   |-- 05-write-the-part1-report.md
+|   `-- 06-document-the-design-pipeline.md
 `-- frontend/
     |-- index.html
     |-- package-lock.json

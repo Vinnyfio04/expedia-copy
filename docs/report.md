@@ -4,9 +4,11 @@
 
 Repository: [github.com/Vinnyfio04/expedia-copy](https://github.com/Vinnyfio04/expedia-copy)
 
-Current Part 1 checkpoint: [`9227f0548bab06e6edc6e9ea814f8a3bedb3d00e`](https://github.com/Vinnyfio04/expedia-copy/commit/9227f0548bab06e6edc6e9ea814f8a3bedb3d00e)
+Part 1 implementation checkpoint: [`9227f0548bab06e6edc6e9ea814f8a3bedb3d00e`](https://github.com/Vinnyfio04/expedia-copy/commit/9227f0548bab06e6edc6e9ea814f8a3bedb3d00e)
 
 Commit message: `Added basic working expedia...`
+
+Documentation commit: `88c7b96b8627bf1d603bf5915181e2c951ca9178`
 
 ## Implementation
 
@@ -65,10 +67,10 @@ must be captured, committed, and linked here before submission.
 - [Current handoff](https://github.com/Vinnyfio04/expedia-copy/blob/main/handoffs/current.md)
 - [Assignment instructions](https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/assignment_instructions.md)
 
-The design note, selected prompts, and current handoff now exist in the working
-tree. They must be committed and pushed before the new GitHub links above will
-be accessible to the instructor. The exact submitted commit in this report must
-then be updated to that reviewed documentation commit.
+The design note, selected prompts, current handoff, and this report were added in
+documentation commit `88c7b96b8627bf1d603bf5915181e2c951ca9178`.
+That commit is currently local and must be pushed before its GitHub links will be
+accessible to the instructor.
 
 Verification screenshots and `docs/verification.md` have not been created. The
 current table also summarizes hotels rather than showing each available stay's
@@ -76,5 +78,5 @@ trip name, dates, night count, and estimated stay price.
 
 The next task is to add the available-stay fields required by Part 1, repeat the
 automated and browser checks, capture repository-accessible screenshots, record
-the final verification evidence, and commit and push the context files. SQLite
+the final verification evidence, and push the reviewed documentation. SQLite
 persistence and booking CRUD remain Part 2 work.
