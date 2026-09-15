@@ -49,15 +49,31 @@ onMounted(() => loadHotels())
 
 <template>
   <main class="app-shell">
+    <header class="hero-copy">
+      <p class="eyebrow">expedia-copy stays</p>
+      <h1>Find a hotel<br />made for the trip.</h1>
+      <p class="hero-intro">
+        Search our hotel collection and compare nightly rates at a glance.
+      </p>
+    </header>
+
     <section class="search-panel" aria-labelledby="page-title">
       <header class="page-header">
-        <p class="eyebrow">expedia-copy</p>
-        <h1 id="page-title">Find your hotel</h1>
+        <div class="brand-mark" aria-hidden="true">e</div>
+        <div>
+          <h2 id="page-title">Choose your stay</h2>
+          <p>Hotel stays · Nightly pricing</p>
+        </div>
       </header>
 
       <form class="search-form" @submit.prevent="submitSearch">
-        <label for="hotel-name">Hotel name</label>
+        <label class="visually-hidden" for="hotel-name">Hotel name</label>
         <div class="search-controls">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"
+            />
+          </svg>
           <input
             id="hotel-name"
             v-model="query"
@@ -78,32 +94,44 @@ onMounted(() => loadHotels())
         {{ isLoading ? 'Loading hotels…' : resultSummary }}
       </p>
 
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Hotel ID</th>
-              <th scope="col">Hotel Name</th>
-              <th scope="col">City</th>
-              <th scope="col">State</th>
-              <th scope="col" class="rate-column">Nightly Rate (USD)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="hotel in hotels" :key="hotel.hotel_id">
-              <td class="hotel-id">{{ hotel.hotel_id }}</td>
-              <td class="hotel-name">{{ hotel.hotel_name }}</td>
-              <td>{{ hotel.city }}</td>
-              <td>{{ hotel.state }}</td>
-              <td class="rate-column">
-                {{ formatRate(hotel.nightly_rate_usd) }}
-              </td>
-            </tr>
-            <tr v-if="!isLoading && hotels.length === 0 && !errorMessage">
-              <td class="empty-cell" colspan="5">No hotels match that name.</td>
-            </tr>
-          </tbody>
-        </table>
+      <ul v-if="hotels.length" class="result-list" aria-label="Hotel results">
+        <li v-for="hotel in hotels" :key="hotel.hotel_id" class="hotel-card">
+          <div class="property-image" aria-hidden="true">
+            <span class="sun"></span>
+            <span class="building building-one"></span>
+            <span class="building building-two"></span>
+            <span class="hotel-id">{{ hotel.hotel_id }}</span>
+          </div>
+
+          <div class="property-details">
+            <p class="location">{{ hotel.city }}, {{ hotel.state }}</p>
+            <h3>{{ hotel.hotel_name }}</h3>
+            <div class="property-tags" aria-label="Hotel details">
+              <span>Hotel stay</span>
+              <span>Rate in USD</span>
+            </div>
+            <p class="rate-note">
+              <span aria-hidden="true"></span>
+              Nightly rate available
+            </p>
+          </div>
+
+          <aside class="price-module" :aria-label="`${hotel.hotel_name} price`">
+            <p class="price-kicker">Nightly rate</p>
+            <p class="price">{{ formatRate(hotel.nightly_rate_usd) }}</p>
+            <p class="price-period">per night</p>
+          </aside>
+        </li>
+      </ul>
+
+      <div
+        v-else-if="!isLoading && !errorMessage"
+        class="empty-state"
+        role="status"
+      >
+        <span aria-hidden="true">⌕</span>
+        <h3>No hotels found</h3>
+        <p>No hotels match that name. Try another search.</p>
       </div>
     </section>
   </main>
