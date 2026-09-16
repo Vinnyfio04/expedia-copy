@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 
 import { fetchHotels, searchHotels } from './api.js'
+import BookingHistory from './components/BookingHistory.vue'
 import BookingScreen from './components/BookingScreen.vue'
 
 
@@ -10,6 +11,7 @@ const hotels = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 const selectedHotel = ref(null)
+const currentView = ref('stays')
 
 const resultSummary = computed(() => {
   const count = hotels.value.length
@@ -48,26 +50,63 @@ function submitSearch() {
 
 async function selectHotel(hotel) {
   selectedHotel.value = hotel
+  currentView.value = 'booking'
   await nextTick()
   window.scrollTo({ top: 0, left: 0 })
 }
 
-async function returnToSearch() {
+async function showView(view) {
   selectedHotel.value = null
+  currentView.value = view
   await nextTick()
   window.scrollTo({ top: 0, left: 0 })
+}
+
+function returnToSearch() {
+  showView('stays')
 }
 
 onMounted(() => loadHotels())
 </script>
 
 <template>
-  <main class="app-shell" :class="{ 'booking-shell': selectedHotel }">
+  <main
+    class="app-shell"
+    :class="{
+      'booking-shell': currentView === 'booking',
+      'history-shell': currentView === 'history',
+    }"
+  >
+    <nav class="site-navigation" aria-label="Primary navigation">
+      <button type="button" class="nav-brand" @click="showView('stays')">
+        <span aria-hidden="true">e</span>
+        expedia-copy
+      </button>
+      <div class="nav-links">
+        <button
+          type="button"
+          :aria-current="currentView === 'stays' ? 'page' : undefined"
+          @click="showView('stays')"
+        >
+          Stays
+        </button>
+        <button
+          type="button"
+          :aria-current="currentView === 'history' ? 'page' : undefined"
+          @click="showView('history')"
+        >
+          Booking history
+        </button>
+      </div>
+    </nav>
+
     <BookingScreen
-      v-if="selectedHotel"
+      v-if="currentView === 'booking' && selectedHotel"
       :hotel="selectedHotel"
       @back="returnToSearch"
     />
+
+    <BookingHistory v-else-if="currentView === 'history'" />
 
     <template v-else>
       <header class="hero-copy">

@@ -2,7 +2,7 @@
 
 import unittest
 
-from app.bookings import list_bookings
+from app.bookings import list_booking_history, list_bookings
 from app.hotels import list_hotels
 from app.search import search_hotel_stays
 from app.trips import list_trips
@@ -38,6 +38,23 @@ class HotelSearchTests(unittest.TestCase):
     def test_empty_hotel_name_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "must not be empty"):
             search_hotel_stays("   ")
+
+
+class BookingHistoryTests(unittest.TestCase):
+    def test_joins_every_booking_to_display_details(self) -> None:
+        history = list_booking_history()
+
+        self.assertEqual(len(history), 6)
+        self.assertEqual(history[0].booking_id, "B001")
+        self.assertEqual(history[0].display_name, "Demo Traveler 1")
+        self.assertEqual(history[0].hotel_name, "Harbor Lantern Hotel")
+        self.assertEqual(history[0].trip_name, "Boston Harbor Weekend")
+        self.assertEqual(history[0].nights, 2)
+        self.assertEqual(history[0].stay_price_usd, 300)
+        self.assertEqual(
+            [booking.status for booking in history],
+            ["confirmed", "cancelled", "confirmed", "confirmed", "confirmed", "cancelled"],
+        )
 
 
 if __name__ == "__main__":

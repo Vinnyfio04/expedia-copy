@@ -24,6 +24,10 @@ export async function fetchHotels() {
   return requestJson('/hotels')
 }
 
+export async function fetchBookingHistory() {
+  return requestJson('/bookings/history')
+}
+
 export async function searchHotels(hotelName) {
   const data = await requestJson(
     `/search?hotel_name=${encodeURIComponent(hotelName)}`,

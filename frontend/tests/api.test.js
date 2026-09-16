@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { fetchHotels, searchHotels } from '../src/api.js'
+import { fetchBookingHistory, fetchHotels, searchHotels } from '../src/api.js'
 
 
 function jsonResponse(data) {
@@ -18,6 +18,15 @@ test('fetchHotels requests the hotel table', async (context) => {
 
   assert.deepEqual(await fetchHotels(), rows)
   assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/hotels')
+})
+
+test('fetchBookingHistory requests the joined read-only history', async (context) => {
+  const rows = [{ booking_id: 'B001', hotel_name: 'Harbor Lantern Hotel' }]
+  const fetchMock = context.mock.fn(async () => jsonResponse(rows))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await fetchBookingHistory(), rows)
+  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/bookings/history')
 })
 
 test('searchHotels returns unique hotel rows from matching stays', async (context) => {

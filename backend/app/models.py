@@ -34,6 +34,25 @@ class Booking(BaseModel):
     status: str
 
 
+class BookingHistoryItem(BaseModel):
+    booking_id: str
+    user_id: str
+    display_name: str
+    trip_id: str
+    trip_name: str
+    hotel_id: str
+    hotel_name: str
+    city: str
+    state: str
+    check_in: date
+    check_out: date
+    nights: int
+    nightly_rate_usd: int
+    stay_price_usd: int
+    booked_on: date
+    status: str
+
+
 class HotelStay(BaseModel):
     trip_id: str
     trip_name: str

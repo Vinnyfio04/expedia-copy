@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "lint": "node --check src/api.js && node --check src/booking.js && node --check src/main.js && node --check tests/api.test.js && node --check tests/booking.test.js",
+    "lint": "node --check src/api.js && node --check src/booking.js && node --check src/history.js && node --check src/main.js && node --check tests/api.test.js && node --check tests/booking.test.js && node --check tests/history.test.js",
     "test": "node --test",
     "build": "vite build",
     "preview": "vite preview"
