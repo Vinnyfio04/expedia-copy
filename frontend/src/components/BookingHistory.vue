@@ -1,14 +1,17 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { fetchBookingHistory } from '../api.js'
-import { cancelBookingPreview } from '../history.js'
+import { cancelBooking as cancelBookingRequest, fetchBookingHistory } from '../api.js'
+import { isBookingCancelled } from '../history.js'
 
 
 const bookings = ref([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const notificationMessage = ref('')
+const cancellationError = ref('')
+const cancellingBookingId = ref('')
+let notificationTimer
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -27,9 +30,44 @@ function formatDate(date) {
   return dateFormatter.format(new Date(`${date}T00:00:00Z`))
 }
 
-function cancelBooking(booking) {
-  bookings.value = cancelBookingPreview(bookings.value, booking.booking_id)
-  notificationMessage.value = `${booking.booking_id} for ${booking.hotel_name} has been canceled in this preview. Nothing has been saved yet.`
+function statusClass(status) {
+  return isBookingCancelled(status) ? 'status-cancelled' : `status-${status}`
+}
+
+function clearNotification() {
+  notificationMessage.value = ''
+  if (notificationTimer) {
+    window.clearTimeout(notificationTimer)
+    notificationTimer = undefined
+  }
+}
+
+function showNotification(message) {
+  clearNotification()
+  notificationMessage.value = message
+  notificationTimer = window.setTimeout(clearNotification, 4000)
+}
+
+async function cancelBooking(booking) {
+  if (isBookingCancelled(booking.status) || cancellingBookingId.value) {
+    return
+  }
+
+  clearNotification()
+  cancellationError.value = ''
+  cancellingBookingId.value = booking.booking_id
+
+  try {
+    const updatedBooking = await cancelBookingRequest(booking.booking_id)
+    bookings.value = bookings.value.map((item) =>
+      item.booking_id === updatedBooking.booking_id ? updatedBooking : item,
+    )
+    showNotification('Trip has been successfully canceled.')
+  } catch (error) {
+    cancellationError.value = error.message
+  } finally {
+    cancellingBookingId.value = ''
+  }
 }
 
 async function loadBookingHistory() {
@@ -47,6 +85,7 @@ async function loadBookingHistory() {
 }
 
 onMounted(loadBookingHistory)
+onBeforeUnmount(clearNotification)
 </script>
 
 <template>
@@ -67,6 +106,14 @@ onMounted(loadBookingHistory)
       {{ notificationMessage }}
     </p>
 
+    <p
+      v-if="cancellationError"
+      class="history-notification history-notification-error"
+      role="alert"
+    >
+      {{ cancellationError }}
+    </p>
+
     <p v-if="isLoading" class="history-status" aria-live="polite">
       Loading booking history…
     </p>
@@ -82,7 +129,7 @@ onMounted(loadBookingHistory)
         <article class="history-card">
           <header class="history-card-header">
             <span class="booking-id">{{ booking.booking_id }}</span>
-            <span class="booking-status" :class="`status-${booking.status}`">
+            <span class="booking-status" :class="statusClass(booking.status)">
               {{ booking.status }}
             </span>
           </header>
@@ -116,13 +163,19 @@ onMounted(loadBookingHistory)
           </div>
 
           <footer class="history-card-footer">
-            <span>Frontend preview · CSV remains unchanged</span>
+            <span>Cancellation keeps this booking in your history.</span>
             <button
               type="button"
-              :disabled="booking.status === 'cancelled'"
+              :disabled="isBookingCancelled(booking.status) || Boolean(cancellingBookingId)"
               @click="cancelBooking(booking)"
             >
-              {{ booking.status === 'cancelled' ? 'Cancelled' : 'Cancel booking' }}
+              {{
+                isBookingCancelled(booking.status)
+                  ? 'Cancelled'
+                  : cancellingBookingId === booking.booking_id
+                    ? 'Canceling...'
+                    : 'Cancel booking'
+              }}
             </button>
           </footer>
         </article>

@@ -34,6 +34,13 @@ class Booking(BaseModel):
     status: str
 
 
+class BookingCreate(BaseModel):
+    hotel_id: str
+    full_name: str
+    check_in: date
+    check_out: date
+
+
 class BookingHistoryItem(BaseModel):
     booking_id: str
     user_id: str

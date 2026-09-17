@@ -6,6 +6,7 @@ import {
   calculateStayCost,
   validateBookingDetails,
 } from '../booking.js'
+import { createBooking } from '../api.js'
 
 
 const props = defineProps({
@@ -22,6 +23,8 @@ const checkIn = ref('')
 const checkOut = ref('')
 const submitted = ref(false)
 const confirmationMessage = ref('')
+const submissionError = ref('')
+const isSubmitting = ref(false)
 
 const bookingDetails = computed(() => ({
   fullName: fullName.value,
@@ -41,18 +44,34 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 })
 
-function confirmBooking() {
+async function confirmBooking() {
   submitted.value = true
   confirmationMessage.value = ''
+  submissionError.value = ''
 
-  if (Object.keys(errors.value).length === 0) {
-    confirmationMessage.value =
-      'Booking details confirmed in this preview. Nothing has been saved yet.'
+  if (Object.keys(errors.value).length > 0 || isSubmitting.value) {
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    await createBooking({
+      hotel_id: props.hotel.hotel_id,
+      full_name: fullName.value.trim(),
+      check_in: checkIn.value,
+      check_out: checkOut.value,
+    })
+    confirmationMessage.value = 'Booking confirmed'
+  } catch (error) {
+    submissionError.value = error.message
+  } finally {
+    isSubmitting.value = false
   }
 }
 
 watch([fullName, checkIn, checkOut], () => {
   confirmationMessage.value = ''
+  submissionError.value = ''
 })
 </script>
 
@@ -162,18 +181,24 @@ watch([fullName, checkIn, checkOut], () => {
               {{ currencyFormatter.format(hotel.nightly_rate_usd) }}
             </span>
           </div>
-          <button type="submit">Confirm</button>
+          <button type="submit" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Saving...' : 'Confirm' }}
+          </button>
         </div>
 
         <p v-if="confirmationMessage" class="confirmation-message" role="status">
           <span aria-hidden="true">✓</span>
           {{ confirmationMessage }}
         </p>
+
+        <p v-if="submissionError" class="booking-submit-error" role="alert">
+          {{ submissionError }}
+        </p>
       </form>
     </div>
 
     <p class="booking-disclaimer">
-      Frontend preview only. Confirming does not create or save a reservation yet.
+      Confirming saves the traveler, stay, and booking to the local CSV data.
     </p>
   </section>
 </template>

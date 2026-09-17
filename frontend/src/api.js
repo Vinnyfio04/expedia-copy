@@ -1,10 +1,13 @@
 const API_BASE = '/api'
 
-async function requestJson(path) {
-  const response = await fetch(`${API_BASE}${path}`)
+async function requestJson(path, options) {
+  const response = await fetch(`${API_BASE}${path}`, options)
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}.`)
+    const errorBody = await response.json().catch(() => null)
+    throw new Error(
+      errorBody?.detail ?? `Request failed with status ${response.status}.`,
+    )
   }
 
   return response.json()
@@ -26,6 +29,22 @@ export async function fetchHotels() {
 
 export async function fetchBookingHistory() {
   return requestJson('/bookings/history')
+}
+
+export async function createBooking(bookingDetails) {
+  return requestJson('/bookings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(bookingDetails),
+  })
+}
+
+export async function cancelBooking(bookingId) {
+  return requestJson(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
+    method: 'PATCH',
+  })
 }
 
 export async function searchHotels(hotelName) {

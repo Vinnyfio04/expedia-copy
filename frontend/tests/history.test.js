@@ -1,18 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { cancelBookingPreview } from '../src/history.js'
+import { isBookingCancelled } from '../src/history.js'
 
 
-test('cancels only the selected booking in the frontend preview', () => {
-  const bookings = [
-    { booking_id: 'B001', status: 'confirmed' },
-    { booking_id: 'B002', status: 'confirmed' },
-  ]
-
-  const updated = cancelBookingPreview(bookings, 'B001')
-
-  assert.equal(updated[0].status, 'cancelled')
-  assert.equal(updated[1].status, 'confirmed')
-  assert.equal(bookings[0].status, 'confirmed')
+test('recognizes both supplied and newly persisted cancellation spellings', () => {
+  assert.equal(isBookingCancelled('cancelled'), true)
+  assert.equal(isBookingCancelled('canceled'), true)
+  assert.equal(isBookingCancelled('confirmed'), false)
 })

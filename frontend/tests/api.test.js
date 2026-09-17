@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { fetchBookingHistory, fetchHotels, searchHotels } from '../src/api.js'
+import {
+  cancelBooking,
+  createBooking,
+  fetchBookingHistory,
+  fetchHotels,
+  searchHotels,
+} from '../src/api.js'
 
 
 function jsonResponse(data) {
@@ -27,6 +33,36 @@ test('fetchBookingHistory requests the joined read-only history', async (context
 
   assert.deepEqual(await fetchBookingHistory(), rows)
   assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/bookings/history')
+})
+
+test('createBooking posts the booking form details', async (context) => {
+  const created = { booking_id: 'B007', status: 'confirmed' }
+  const fetchMock = context.mock.fn(async () => jsonResponse(created))
+  globalThis.fetch = fetchMock
+  const details = {
+    hotel_id: 'H001',
+    full_name: 'Demo traveler 21457',
+    check_in: '2026-11-21',
+    check_out: '2026-11-28',
+  }
+
+  assert.deepEqual(await createBooking(details), created)
+  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/bookings')
+  assert.deepEqual(fetchMock.mock.calls[0].arguments[1], {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(details),
+  })
+})
+
+test('cancelBooking patches the selected booking', async (context) => {
+  const cancelled = { booking_id: 'B007', status: 'canceled' }
+  const fetchMock = context.mock.fn(async () => jsonResponse(cancelled))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await cancelBooking('B007'), cancelled)
+  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/bookings/B007/cancel')
+  assert.deepEqual(fetchMock.mock.calls[0].arguments[1], { method: 'PATCH' })
 })
 
 test('searchHotels returns unique hotel rows from matching stays', async (context) => {
