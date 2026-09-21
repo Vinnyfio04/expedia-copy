@@ -2,8 +2,10 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { cancelBooking as cancelBookingRequest, fetchBookingHistory } from '../api.js'
-import { isBookingCancelled } from '../history.js'
+import { bookingCountLabel, isBookingCancelled } from '../history.js'
 
+
+defineEmits(['plan-trip'])
 
 const bookings = ref([])
 const isLoading = ref(true)
@@ -91,10 +93,19 @@ onBeforeUnmount(clearNotification)
 <template>
   <section class="history-layout" aria-labelledby="history-title">
     <header class="history-heading">
-      <p class="eyebrow">expedia-copy bookings</p>
-      <h1 id="history-title">Your booking history.</h1>
-      <p>Review every simulated reservation from the supplied travel data.</p>
+      <div>
+        <p class="eyebrow">expedia-copy travel</p>
+        <h1 id="history-title">Trips</h1>
+      </div>
+      <button type="button" class="plan-trip-link" @click="$emit('plan-trip')">
+        <span aria-hidden="true">+</span>
+        Plan a trip
+      </button>
     </header>
+
+    <nav class="history-tabs" aria-label="Trip sections">
+      <span aria-current="page">Bookings</span>
+    </nav>
 
     <p
       v-if="notificationMessage"
@@ -114,56 +125,71 @@ onBeforeUnmount(clearNotification)
       {{ cancellationError }}
     </p>
 
-    <p v-if="isLoading" class="history-status" aria-live="polite">
-      Loading booking history…
-    </p>
-    <p v-else-if="errorMessage" class="history-status error-message" role="alert">
-      {{ errorMessage }}
-    </p>
-    <p v-else class="history-status">
-      {{ bookings.length }} {{ bookings.length === 1 ? 'booking' : 'bookings' }} found.
-    </p>
+    <div class="history-summary">
+      <div>
+        <p>Booked stays</p>
+        <h2>Your bookings</h2>
+      </div>
+      <p v-if="isLoading" class="history-status" aria-live="polite">
+        Loading booking history…
+      </p>
+      <p v-else-if="errorMessage" class="history-status error-message" role="alert">
+        {{ errorMessage }}
+      </p>
+      <p v-else class="history-status">
+        {{ bookingCountLabel(bookings.length) }}
+      </p>
+    </div>
 
     <ul v-if="bookings.length" class="history-list" aria-label="Booking history">
       <li v-for="booking in bookings" :key="booking.booking_id">
         <article class="history-card">
           <header class="history-card-header">
-            <span class="booking-id">{{ booking.booking_id }}</span>
+            <span class="booking-id">Booking {{ booking.booking_id }}</span>
             <span class="booking-status" :class="statusClass(booking.status)">
               {{ booking.status }}
             </span>
           </header>
 
           <div class="history-card-body">
-            <div class="history-primary">
-              <p>{{ booking.city }}, {{ booking.state }}</p>
-              <h2>{{ booking.hotel_name }}</h2>
-              <strong>{{ booking.trip_name }}</strong>
-              <span>Traveler: {{ booking.display_name }}</span>
+            <div class="history-property-visual" aria-hidden="true">
+              <span class="history-sun"></span>
+              <span class="history-mountain history-mountain-back"></span>
+              <span class="history-mountain history-mountain-front"></span>
+              <span class="history-hotel"></span>
             </div>
 
-            <dl class="history-details">
-              <div>
-                <dt>Stay</dt>
-                <dd>{{ formatDate(booking.check_in) }} – {{ formatDate(booking.check_out) }}</dd>
+            <div class="history-booking-content">
+              <div class="history-primary">
+                <p>{{ booking.city }}, {{ booking.state }}</p>
+                <h2>{{ booking.hotel_name }}</h2>
+                <strong>{{ booking.trip_name }}</strong>
+                <span>Traveler: {{ booking.display_name }}</span>
               </div>
-              <div>
-                <dt>Length</dt>
-                <dd>{{ booking.nights }} {{ booking.nights === 1 ? 'night' : 'nights' }}</dd>
-              </div>
-              <div>
-                <dt>Booked</dt>
-                <dd>{{ formatDate(booking.booked_on) }}</dd>
-              </div>
-              <div>
-                <dt>Estimated total</dt>
-                <dd>{{ currencyFormatter.format(booking.stay_price_usd) }}</dd>
-              </div>
-            </dl>
+
+              <dl class="history-details">
+                <div>
+                  <dt>Stay</dt>
+                  <dd>{{ formatDate(booking.check_in) }} – {{ formatDate(booking.check_out) }}</dd>
+                </div>
+                <div>
+                  <dt>Length</dt>
+                  <dd>{{ booking.nights }} {{ booking.nights === 1 ? 'night' : 'nights' }}</dd>
+                </div>
+                <div>
+                  <dt>Booked</dt>
+                  <dd>{{ formatDate(booking.booked_on) }}</dd>
+                </div>
+                <div>
+                  <dt>Estimated total</dt>
+                  <dd>{{ currencyFormatter.format(booking.stay_price_usd) }}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
 
           <footer class="history-card-footer">
-            <span>Cancellation keeps this booking in your history.</span>
+            <span>Manage this reservation without leaving your trip history.</span>
             <button
               type="button"
               :disabled="isBookingCancelled(booking.status) || Boolean(cancellingBookingId)"
@@ -181,5 +207,19 @@ onBeforeUnmount(clearNotification)
         </article>
       </li>
     </ul>
+
+    <section class="trip-planning-card" aria-labelledby="plan-trip-title">
+      <div>
+        <p>Plan your next trip</p>
+        <h2 id="plan-trip-title">Find another stay for the journey ahead.</h2>
+        <button type="button" @click="$emit('plan-trip')">Plan a trip</button>
+      </div>
+      <div class="trip-planning-visual" aria-hidden="true">
+        <span class="planning-sun"></span>
+        <span class="planning-ridge planning-ridge-back"></span>
+        <span class="planning-ridge planning-ridge-front"></span>
+        <span class="planning-route"></span>
+      </div>
+    </section>
   </section>
 </template>

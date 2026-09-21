@@ -1210,3 +1210,885 @@ h1 {
     grid-template-columns: 6rem 1fr;
   }
 }
+
+/* Expedia-inspired stays landing page */
+.stays-shell {
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  overflow-x: clip;
+  color: #1f2b4d;
+  background: #fff;
+}
+
+.expedia-topbar {
+  position: relative;
+  z-index: 10;
+  min-height: 5rem;
+  border-bottom: 1px solid #e4e6eb;
+  background: #fff;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100% - 2.5rem, 75rem);
+  min-height: 5rem;
+  margin: 0 auto;
+}
+
+.topbar-primary,
+.topbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-primary {
+  gap: 2.25rem;
+}
+
+.expedia-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0;
+  border: 0;
+  color: #202a4d;
+  background: transparent;
+  font-size: 1.85rem;
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  cursor: pointer;
+}
+
+.expedia-mark {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 0.4rem;
+  color: #202a4d;
+  background: #fddb32;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.shop-travel-link,
+.topbar-actions a,
+.topbar-actions button,
+.currency-label {
+  color: #202a4d;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.shop-travel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.topbar-actions {
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.topbar-actions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.shop-travel-link:hover,
+.topbar-actions a:hover,
+.topbar-actions button:hover {
+  color: #1668e3;
+}
+
+.expedia-wordmark:focus-visible,
+.shop-travel-link:focus-visible,
+.topbar-actions a:focus-visible,
+.topbar-actions button:focus-visible,
+.product-tab:focus-visible,
+.hero-search-button:focus-visible {
+  outline: 3px solid rgb(22 104 227 / 30%);
+  outline-offset: 4px;
+}
+
+.messages-icon {
+  display: inline-grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+}
+
+.messages-icon svg {
+  width: 1.55rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.stays-hero {
+  position: relative;
+  display: grid;
+  min-height: 27rem;
+  place-items: start center;
+  background-image: url('./assets/stays-hero-landscape.png');
+  background-position: center 54%;
+  background-size: cover;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(21 39 61 / 34%) 0%,
+    rgb(24 35 45 / 14%) 56%,
+    rgb(15 26 36 / 32%) 100%
+  );
+}
+
+.stays-hero > h1 {
+  position: relative;
+  z-index: 1;
+  margin: clamp(3.25rem, 7vw, 5rem) 1.5rem 0;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.75rem, 4.6vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-align: center;
+  text-shadow: 0 0.16rem 0.75rem rgb(0 0 0 / 24%);
+}
+
+.travel-search-card {
+  position: absolute;
+  z-index: 2;
+  bottom: -6.5rem;
+  left: 50%;
+  width: min(calc(100% - 2.5rem), 71.5rem);
+  overflow: hidden;
+  border: 1px solid rgb(32 42 77 / 9%);
+  border-radius: 1.15rem;
+  background: #fff;
+  box-shadow: 0 1rem 2.5rem rgb(18 32 57 / 20%);
+  transform: translateX(-50%);
+}
+
+.product-tabs {
+  display: flex;
+  justify-content: center;
+  min-height: 8.85rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e2e5eb;
+}
+
+.product-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 7.8rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.55rem;
+  min-width: 6.5rem;
+  padding: 1rem 0.65rem 0.85rem;
+  border: 0;
+  color: #202a4d;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.product-tab:hover {
+  color: #1668e3;
+  background: #f7f9fc;
+}
+
+.product-tab.active {
+  color: #1668e3;
+}
+
+.product-tab.active::after {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0;
+  left: 0.65rem;
+  height: 0.2rem;
+  border-radius: 999px 999px 0 0;
+  background: #1668e3;
+  content: "";
+}
+
+.product-icon {
+  display: grid;
+  min-height: 2.8rem;
+  place-items: center;
+  font-size: 2.45rem;
+  filter: saturate(0.82);
+  line-height: 1;
+}
+
+.stays-search-form {
+  display: grid;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  padding: 1.7rem 1.9rem 1.85rem;
+}
+
+.hotel-search-field {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  gap: 0.7rem;
+  min-height: 4.1rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #8f96a8;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.hotel-search-field:focus-within {
+  border-color: #1668e3;
+  box-shadow: inset 0 0 0 1px #1668e3, 0 0 0 3px rgb(22 104 227 / 14%);
+}
+
+.hotel-search-field svg {
+  width: 1.65rem;
+  height: 1.65rem;
+  fill: none;
+  stroke: #202a4d;
+  stroke-width: 1.8;
+}
+
+.hotel-search-field div {
+  min-width: 0;
+}
+
+.hotel-search-field label {
+  display: block;
+  margin-bottom: 0.08rem;
+  color: #4c5573;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.hotel-search-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #202a4d;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.hotel-search-field input::placeholder {
+  color: #626b81;
+  font-weight: 500;
+  opacity: 1;
+}
+
+.hero-search-button {
+  min-width: 8.2rem;
+  padding: 0 1.7rem;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: #1668e3;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.hero-search-button:hover:not(:disabled) {
+  background: #0d50b5;
+}
+
+.hero-search-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.hotel-results {
+  width: min(calc(100% - 2.5rem), 75rem);
+  margin: 9.5rem auto 0;
+  padding-bottom: 5rem;
+}
+
+.results-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.35rem;
+}
+
+.results-heading > div > p {
+  margin: 0 0 0.35rem;
+  color: #1668e3;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.results-heading h2 {
+  margin: 0;
+  color: #202a4d;
+  font-size: clamp(1.8rem, 3.5vw, 2.55rem);
+  letter-spacing: -0.045em;
+}
+
+.hotel-results .status-message {
+  min-height: auto;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  color: #4f5871;
+  font-size: 0.9rem;
+}
+
+.hotel-results .error-message {
+  color: #b42318;
+}
+
+.hotel-results .result-list {
+  padding: 0;
+}
+
+.hotel-results .empty-state {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+@media (max-width: 62rem) {
+  .topbar-actions {
+    gap: 1rem;
+  }
+
+  .topbar-actions .currency-label,
+  .topbar-actions a:first-of-type {
+    display: none;
+  }
+
+  .product-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .product-tab {
+    flex: 0 0 7rem;
+  }
+}
+
+@media (max-width: 44rem) {
+  .stays-shell {
+    padding: 0;
+  }
+
+  .expedia-topbar,
+  .topbar-inner {
+    min-height: 4.25rem;
+  }
+
+  .topbar-inner {
+    width: min(100% - 1.5rem, 75rem);
+  }
+
+  .expedia-wordmark {
+    font-size: 1.45rem;
+  }
+
+  .expedia-mark {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.1rem;
+  }
+
+  .shop-travel-link,
+  .topbar-actions .currency-label,
+  .topbar-actions a:not(:last-child),
+  .messages-icon {
+    display: none;
+  }
+
+  .topbar-actions {
+    gap: 0.85rem;
+  }
+
+  .stays-hero {
+    min-height: 28.5rem;
+    background-position: center;
+  }
+
+  .stays-hero > h1 {
+    margin-top: 2.75rem;
+    font-size: clamp(2.35rem, 11vw, 3.2rem);
+  }
+
+  .travel-search-card {
+    bottom: -10.5rem;
+    width: calc(100% - 1.5rem);
+    border-radius: 1rem;
+  }
+
+  .product-tabs {
+    min-height: 7rem;
+    padding: 0 0.35rem;
+  }
+
+  .product-tab {
+    flex-basis: 5.6rem;
+    min-width: 5.6rem;
+    padding-right: 0.4rem;
+    padding-left: 0.4rem;
+    font-size: 0.76rem;
+  }
+
+  .product-icon {
+    min-height: 2.2rem;
+    font-size: 1.9rem;
+  }
+
+  .stays-search-form {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .hotel-search-field {
+    min-height: 4rem;
+  }
+
+  .hero-search-button {
+    min-height: 3.35rem;
+  }
+
+  .hotel-results {
+    width: calc(100% - 1.5rem);
+    margin-top: 12.5rem;
+  }
+
+  .results-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+}
+
+/* Expedia-inspired booking history */
+.history-shell {
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  place-items: normal;
+  color: #202a4d;
+  background: #f7f8fa;
+}
+
+.topbar-actions button.active {
+  color: #1668e3;
+}
+
+.history-layout {
+  width: min(100%, 75rem);
+  margin: 0 auto;
+  padding: 3.2rem 1.25rem 5rem;
+}
+
+.history-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  max-width: none;
+}
+
+.history-heading .eyebrow {
+  margin-bottom: 0.35rem;
+  color: #1668e3;
+}
+
+.history-heading h1 {
+  color: #202a4d;
+  font-family: inherit;
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.plan-trip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0;
+  border: 0;
+  color: #1668e3;
+  background: transparent;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.plan-trip-link span {
+  font-size: 1.65rem;
+  font-weight: 400;
+  line-height: 0.8;
+}
+
+.plan-trip-link:hover {
+  color: #0d50b5;
+}
+
+.plan-trip-link:focus-visible,
+.trip-planning-card button:focus-visible {
+  outline: 3px solid rgb(22 104 227 / 28%);
+  outline-offset: 3px;
+}
+
+.history-tabs {
+  margin-top: 1.45rem;
+  border-bottom: 1px solid #d9dce3;
+}
+
+.history-tabs span {
+  position: relative;
+  display: inline-block;
+  min-width: 7rem;
+  padding: 0.85rem 1rem 0.95rem;
+  color: #202a4d;
+  font-size: 0.95rem;
+  font-weight: 750;
+  text-align: center;
+}
+
+.history-tabs span::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 0.2rem;
+  border-radius: 999px 999px 0 0;
+  background: #1668e3;
+  content: "";
+}
+
+.history-summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin: 2.5rem 0 1.2rem;
+}
+
+.history-summary > div > p {
+  margin: 0 0 0.3rem;
+  color: #1668e3;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.history-summary h2 {
+  margin: 0;
+  color: #202a4d;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  letter-spacing: -0.035em;
+}
+
+.history-summary .history-status {
+  margin: 0 0 0.2rem;
+  color: #59627a;
+  font-weight: 650;
+}
+
+.history-list {
+  gap: 1.25rem;
+}
+
+.history-card {
+  border: 1px solid #dfe2e8;
+  border-radius: 1rem;
+  box-shadow: 0 0.35rem 1.1rem rgb(32 42 77 / 6%);
+}
+
+.history-card-header {
+  padding: 0.8rem 1.1rem;
+  border-bottom-color: #e5e7ec;
+  background: #fff;
+}
+
+.booking-id {
+  color: #59627a;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.booking-status {
+  padding: 0.32rem 0.65rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.history-card-body {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+}
+
+.history-property-visual {
+  position: relative;
+  min-height: 12rem;
+  overflow: hidden;
+  background: linear-gradient(155deg, #9dc8e0 0 45%, #d9bd85 45% 62%, #6389a0 62% 100%);
+}
+
+.history-sun {
+  position: absolute;
+  top: 1.15rem;
+  right: 1.15rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: #ffe276;
+  box-shadow: 0 0 1.2rem rgb(255 226 118 / 60%);
+}
+
+.history-mountain {
+  position: absolute;
+  right: -12%;
+  bottom: -8%;
+  width: 82%;
+  aspect-ratio: 1;
+  transform: rotate(45deg);
+}
+
+.history-mountain-back {
+  right: 34%;
+  bottom: -35%;
+  background: #6f91a0;
+}
+
+.history-mountain-front {
+  background: #426f82;
+}
+
+.history-hotel {
+  position: absolute;
+  bottom: 0;
+  left: 0.9rem;
+  width: 42%;
+  height: 48%;
+  border-radius: 0.25rem 0.25rem 0 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 0.68rem, rgb(255 231 151 / 88%) 0.68rem 0.9rem),
+    #f4f0e8;
+  box-shadow: 0 0 0 1px rgb(32 42 77 / 10%);
+}
+
+.history-booking-content {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(12rem, 0.85fr) minmax(22rem, 1.6fr);
+  gap: 1.5rem;
+  padding: 1.35rem;
+}
+
+.history-primary h2 {
+  color: #202a4d;
+  font-size: 1.3rem;
+}
+
+.history-primary strong {
+  color: #1668e3;
+}
+
+.history-details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.history-details div {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 0.65rem;
+  background: #f8f9fb;
+}
+
+.history-card-footer {
+  padding: 0.8rem 1.1rem;
+  background: #fff;
+}
+
+.history-card-footer button {
+  min-width: 8.6rem;
+  padding: 0.62rem 1rem;
+  border-radius: 999px;
+}
+
+.trip-planning-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.9fr) minmax(20rem, 1.1fr);
+  min-height: 17rem;
+  margin-top: 2.5rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #eaf1f7;
+}
+
+.trip-planning-card > div:first-child {
+  position: relative;
+  z-index: 2;
+  padding: clamp(2rem, 4vw, 3.2rem);
+}
+
+.trip-planning-card p {
+  margin: 0 0 0.55rem;
+  color: #1668e3;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.trip-planning-card h2 {
+  max-width: 28rem;
+  margin: 0;
+  color: #202a4d;
+  font-size: clamp(1.75rem, 3.5vw, 2.6rem);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.trip-planning-card button {
+  margin-top: 1.4rem;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: #1668e3;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.trip-planning-card button:hover {
+  background: #0d50b5;
+}
+
+.trip-planning-visual {
+  position: relative;
+  min-height: 17rem;
+  overflow: hidden;
+  background: linear-gradient(180deg, #a6cbe1 0 52%, #efcf97 52% 69%, #7598a9 69% 100%);
+}
+
+.planning-sun {
+  position: absolute;
+  top: 2.25rem;
+  right: 3rem;
+  width: 4.2rem;
+  height: 4.2rem;
+  border-radius: 50%;
+  background: #ffe276;
+  box-shadow: 0 0 2.5rem rgb(255 226 118 / 62%);
+}
+
+.planning-ridge {
+  position: absolute;
+  right: -5%;
+  bottom: -34%;
+  width: 68%;
+  aspect-ratio: 1;
+  transform: rotate(45deg);
+}
+
+.planning-ridge-back {
+  right: 34%;
+  bottom: -52%;
+  background: #789ba9;
+}
+
+.planning-ridge-front {
+  background: #416c7f;
+}
+
+.planning-route {
+  position: absolute;
+  right: 20%;
+  bottom: -5.5rem;
+  width: 8rem;
+  height: 17rem;
+  border: 0.35rem solid rgb(255 255 255 / 82%);
+  border-top: 0;
+  border-bottom: 0;
+  border-radius: 50%;
+  transform: rotate(22deg);
+}
+
+@media (max-width: 64rem) {
+  .history-booking-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 44rem) {
+  .history-shell {
+    padding: 0;
+  }
+
+  .history-layout {
+    padding: 2rem 0.75rem 3rem;
+  }
+
+  .history-heading {
+    align-items: flex-start;
+  }
+
+  .history-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 2rem;
+  }
+
+  .history-card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .history-property-visual {
+    min-height: 10rem;
+  }
+
+  .history-booking-content {
+    padding: 1rem;
+  }
+
+  .history-details {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-planning-card {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-planning-visual {
+    display: none;
+  }
+}
