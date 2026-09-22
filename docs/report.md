@@ -12,51 +12,42 @@ Documentation commit: `88c7b96b8627bf1d603bf5915181e2c951ca9178`
 
 ## Implementation
 
-The Vue frontend provides a hotel-name search field, Search button, result count,
-no-results message, and a table containing hotel IDs, names, cities, states, and
-nightly rates. API requests are kept separate from presentation code in
-`frontend/src/api.js`.
-
-The frontend communicates with FastAPI through JSON. It initially requests all
-hotels from `GET /api/hotels`. Hotel-name searches use
-`GET /api/search?hotel_name=...`.
-
-The Python backend reads the supplied CSV files. It joins hotels and trips through
-`hotel_id`, performs case-insensitive hotel-name matching, calculates the number
-of nights and estimated stay price, and returns structured JSON. The frontend
-converts matching stays into unique hotel rows for the current table.
+In part 1, we had the general project framework set up along with a basic implementation of the application. The user could search hotels but they could not schedule any kind of trip. Since then, we implemented the bookings tab so the user can now select the hotel and plan a trip with the appropriate information.
 
 ## Verification
 
 - **Initial page load**
-  - Action: Started FastAPI and Vue, then opened the application in a browser.
-  - Expected: The supplied hotels should appear with a result count and labeled
-    table columns.
-  - Observed: The page displayed `8 hotels found.` followed by all eight supplied
-    hotels. The table showed Hotel ID, Hotel Name, City, State, and Nightly Rate
-    (USD).
+  - Action: Starting both the server and front end and inputting the URL
+  - Expected: The stays page loads and the hotels listed below showing the total number of hotels available.
+  - Observed: The stays page loaded with confirmation of "8 hotels found."
+
+- **Switching from stays to bookings tab**
+  - Action: Scrolling from the top and clicking "Trips" to enter the page
+  - Expected: The trips page gets loaded with all of the trips on the SQLite file.
+  - Observed: The trips page loaded and the list of bookings is visible. Confirmation of 10 bookings is listed on the site.
 
 - **Successful search**
-  - Action: Searched for `Harbor Lantern`.
-  - Expected: Harbor Lantern Hotel should be returned.
-  - Observed: The page displayed `1 hotel found.` and showed `H001`, Harbor
-    Lantern Hotel, Boston, MA, and `$150`.
+  - Action: Go to the stays tab and search up "Metro" to get Metro Garden Hotel.
+  - Expected: Metro Garden Hotel shows up.
+  - Observed: Metro Garden Hotel shows up with confirmation of "1 hotel found."
 
-- **No-results search**
-  - Action: Searched for `Not A Real Hotel`.
-  - Expected: No table records should be returned and a clear no-results message
-    should appear.
-  - Observed: The page displayed `0 hotels found.` and
-    `No hotels match that name.`
+- **Booking a trip**
+  - Action: Select Metro Garden Hotel, input any date and the appropriate information, select confirm and see the confirmation message. Then go into trips to find the booking there.
+  - Expected: Hitting confirm sends the confirmation message and the trip is located under the trips tab.
+  - Observed: The scheduling page is loaded with the appropriate hotel information. When the proper information is entered and confirmed, a little message confirming the success appears. When switching to the booking history tab, I can see the trip I had just made.
 
-- **Automated checks**
-  - Backend: Four tests passed.
-  - Frontend: Two tests passed.
-  - Frontend lint: Passed.
-  - Production build: Passed with Vite.
+- **Canceling a trip**
+  - Action: In the bookings tab, go down to the trip I just made and cancel it.
+  - Expected: The trip gets cancelled but remains in the list and the proper .csv file is updated.
+  - Observed: After the cancel button is hit, the booking is grayed out and the cancel button says Cancelled. Confirmation of the cancellation is present.
 
-No verification screenshots are currently stored in the repository. Screenshots
-must be captured, committed, and linked here before submission.
+## Verification screenshots
+
+- Initial stays page: [initial page test](images/08-initial-page-test.jpg)
+- Hotel-name search: [hotel search test](images/07-hotel-search-test.jpg)
+- Booking creation: [booking test](images/05-booking-test.jpg)
+- Trips and booking history: [trips page test](images/09-trips-page-test.jpg)
+- Persistent cancellation: [cancellation test](images/06-cancellation-test.jpg)
 
 ## Project context and next steps
 
@@ -72,11 +63,8 @@ documentation commit `88c7b96b8627bf1d603bf5915181e2c951ca9178`.
 That commit is currently local and must be pushed before its GitHub links will be
 accessible to the instructor.
 
-Verification screenshots and `docs/verification.md` have not been created. The
-current table also summarizes hotels rather than showing each available stay's
-trip name, dates, night count, and estimated stay price.
+Current limitation: There is no account system implemented.
 
-The next task is to add the available-stay fields required by Part 1, repeat the
-automated and browser checks, capture repository-accessible screenshots, record
-the final verification evidence, and push the reviewed documentation. SQLite
-persistence and booking CRUD remain Part 2 work.
+The next task would be to create account creation and management if we were to continue this further.
+
+## Demo Video

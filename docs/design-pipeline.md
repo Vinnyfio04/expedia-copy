@@ -1,6 +1,6 @@
 # expedia-copy Design Pipeline
 
-## Frontend and backend boundary
+## View and controller boundary
 
 The Vue frontend owns what the user sees and manipulates. `App.vue` holds the
 search input and interface state, submits searches, formats nightly rates, and
@@ -22,7 +22,7 @@ assignment1/
 |-- .gitignore
 |-- AGENTS.md
 |-- README.md
-|-- backend/
+|-- controller/
 |   |-- requirements.txt
 |   |-- app/
 |   |   |-- __init__.py
@@ -37,7 +37,7 @@ assignment1/
 |   `-- tests/
 |       |-- __init__.py
 |       `-- test_csv_api.py
-|-- data/
+|-- model/
 |   |-- README.md
 |   |-- bookings.csv
 |   |-- hotels.csv
@@ -64,7 +64,7 @@ assignment1/
 |   |-- 04-review-and-create-the-part1-checkpoint.md
 |   |-- 05-write-the-part1-report.md
 |   `-- 06-document-the-design-pipeline.md
-`-- frontend/
+`-- view/
     |-- index.html
     |-- package-lock.json
     |-- package.json
@@ -87,23 +87,23 @@ hotel-name search follows this longer path:
 User enters a hotel name and submits the Vue form
                          |
                          v
-frontend/src/App.vue
+view/src/App.vue
   submitSearch() trims the input
   loadHotels() owns loading, success, and error state
                          |
                          v
-frontend/src/api.js
+view/src/api.js
   searchHotels() builds the encoded request
                          |
                          v
 GET /api/search?hotel_name=...
                          |
                          v
-backend/app/main.py
+controller/app/main.py
   registered FastAPI search router
                          |
                          v
-backend/app/search.py
+controller/app/search.py
   FastAPI search_hotels() route validates the request boundary
                          |
                          v
@@ -124,11 +124,11 @@ backend/app/search.py
 FastAPI serializes the response as JSON
                 |
                 v
-frontend/src/api.js receives JSON and reduces repeated stays
+view/src/api.js receives JSON and reduces repeated stays
 to unique hotel rows for the current table
                 |
                 v
-frontend/src/App.vue updates reactive state
+view/src/App.vue updates reactive state
                 |
                 v
 Result count, no-results message, and HTML table render

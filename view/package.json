@@ -1,0 +1,20 @@
+{
+  "name": "expedia-copy-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "lint": "node --check src/api.js && node --check src/booking.js && node --check src/history.js && node --check src/main.js && node --check src/navigation.js && node --check src/travelLinks.js && node --check tests/api.test.js && node --check tests/booking.test.js && node --check tests/history.test.js && node --check tests/navigation.test.js && node --check tests/travelLinks.test.js",
+    "test": "node --test",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.0",
+    "vite": "^7.0.0"
+  }
+}

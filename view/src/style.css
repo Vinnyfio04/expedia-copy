@@ -2092,3 +2092,271 @@ h1 {
     display: none;
   }
 }
+
+/* Expedia-inspired booking checkout */
+.booking-shell {
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  color: #202a4d;
+  background: #f7f8fa;
+}
+
+.booking-shell .expedia-topbar {
+  width: 100%;
+}
+
+.booking-layout {
+  width: min(100%, 75rem);
+  margin: 0 auto;
+  padding: 2.25rem 1.25rem 5rem;
+}
+
+.booking-layout .back-button {
+  color: #1668e3;
+}
+
+.booking-heading {
+  max-width: 44rem;
+  margin: 1.1rem 0 2rem;
+}
+
+.booking-heading .eyebrow {
+  margin-bottom: 0.35rem;
+  color: #1668e3;
+}
+
+.booking-heading h1 {
+  color: #202a4d;
+  font-family: inherit;
+  font-size: clamp(2.2rem, 4vw, 3.15rem);
+  font-weight: 750;
+  letter-spacing: -0.05em;
+  line-height: 1.08;
+}
+
+.booking-heading > p:last-child {
+  margin-top: 0.75rem;
+  color: #59627a;
+  font-size: 1rem;
+}
+
+.booking-checkout-grid {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1.25fr) minmax(19rem, 0.75fr);
+  gap: 1.5rem;
+}
+
+.booking-form,
+.selected-hotel,
+.price-details {
+  border: 1px solid #dfe2e8;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.35rem 1.1rem rgb(32 42 77 / 5%);
+}
+
+.booking-form {
+  padding: clamp(1.4rem, 3.5vw, 2.25rem);
+}
+
+.form-intro {
+  align-items: flex-start;
+  margin-bottom: 1.6rem;
+  padding-bottom: 1.35rem;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.form-intro h2 {
+  color: #202a4d;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.form-intro > span {
+  color: #59627a;
+  font-weight: 650;
+}
+
+.full-name-field {
+  max-width: none;
+}
+
+.field-group input {
+  min-height: 3.65rem;
+  border-color: #9299aa;
+  border-radius: 0.55rem;
+  color: #202a4d;
+}
+
+.booking-summary {
+  margin-top: 2rem;
+  padding: 1.2rem;
+  border: 1px solid #dfe2e8;
+  border-radius: 0.8rem;
+  background: #f7f8fa;
+}
+
+.booking-summary p,
+.booking-summary div > span {
+  color: #59627a;
+}
+
+.booking-summary strong {
+  color: #202a4d;
+}
+
+.booking-summary button {
+  color: #fff;
+  background: #1668e3;
+}
+
+.booking-summary button:hover {
+  background: #0d50b5;
+}
+
+.booking-summary button:focus-visible {
+  outline-color: rgb(22 104 227 / 35%);
+}
+
+.booking-hotel-panel {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.selected-hotel {
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.booking-property-image {
+  display: flex;
+  align-items: flex-end;
+  min-height: 13rem;
+  padding: 1rem;
+  background-image:
+    linear-gradient(180deg, transparent 45%, rgb(17 34 56 / 60%) 100%),
+    url('./assets/stays-hero-landscape.png');
+  background-position: center;
+  background-size: cover;
+}
+
+.booking-property-image > span {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(20 33 61 / 78%);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.selected-hotel-copy {
+  padding: 1.25rem;
+}
+
+.selected-hotel-copy h2 {
+  font-size: 1.45rem;
+}
+
+.selected-stay-details {
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4e7ec;
+}
+
+.selected-stay-details p {
+  margin: 0;
+  color: #202a4d;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.price-details {
+  padding: 1.25rem;
+}
+
+.price-details h2 {
+  margin: 0 0 1rem;
+  color: #202a4d;
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
+}
+
+.price-details dl {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+}
+
+.price-details dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #4f5871;
+}
+
+.price-details dd {
+  margin: 0;
+  color: #202a4d;
+  font-weight: 700;
+  text-align: right;
+}
+
+.price-details .price-total {
+  margin-top: 0.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #dfe2e8;
+  color: #202a4d;
+  font-weight: 750;
+}
+
+.booking-disclaimer {
+  margin-top: 1rem;
+  color: #667085;
+  text-align: left;
+}
+
+@media (max-width: 52rem) {
+  .booking-checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-hotel-panel {
+    position: static;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 44rem) {
+  .booking-layout {
+    padding: 1.5rem 0.75rem 3rem;
+  }
+
+  .booking-heading {
+    margin: 0.8rem 0 1.5rem;
+  }
+
+  .booking-heading h1 {
+    font-size: clamp(2rem, 11vw, 2.75rem);
+  }
+
+  .booking-property-image {
+    min-height: 10.5rem;
+  }
+
+  .date-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .booking-summary button {
+    width: 100%;
+  }
+}

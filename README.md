@@ -6,15 +6,19 @@
 
 ```text
 .
-|-- backend/          FastAPI application
+|-- controller/       FastAPI application and tests
 |   |-- app/
 |   |   `-- main.py
 |   `-- requirements.txt
-|-- frontend/         Vue application powered by Vite
+|-- model/            CSV application data and relationship assets
+|-- view/             Vue application powered by Vite
 |   |-- src/
 |   |-- index.html
 |   |-- package.json
 |   `-- vite.config.js
+|-- docs/             Project documentation
+|-- prompts/          Selected project prompts
+|-- handoffs/         Current project handoff
 `-- AGENTS.md          Project rules for coding agents
 ```
 
@@ -24,12 +28,12 @@
 - Node.js 20 or newer
 - npm 10 or newer
 
-## Backend setup
+## Controller setup
 
 Dependencies are not installed as part of this scaffold. When you are ready to install them:
 
 ```powershell
-cd backend
+cd controller
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -38,21 +42,21 @@ uvicorn app.main:app --reload
 
 The API will be available at `http://localhost:8000`. Its interactive documentation will be at `http://localhost:8000/docs`.
 
-## Frontend setup
+## View setup
 
 In a separate terminal, when you are ready to install dependencies:
 
 ```powershell
-cd frontend
+cd view
 npm install
 npm run dev
 ```
 
 Vite will print the local frontend URL, typically `http://localhost:5173`.
 
-## Frontend checks
+## View checks
 
-From the `frontend` directory, run:
+From the `view` directory, run:
 
 ```powershell
 npm run lint

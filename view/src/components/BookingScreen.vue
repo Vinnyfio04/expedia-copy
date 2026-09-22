@@ -83,32 +83,11 @@ watch([fullName, checkIn, checkOut], () => {
     </button>
 
     <header class="booking-heading">
-      <p class="eyebrow">expedia-copy booking</p>
       <h1 id="booking-title">Complete your stay.</h1>
       <p>Review the hotel, choose your dates, and enter the traveler name.</p>
     </header>
 
-    <div class="booking-card">
-      <section class="selected-hotel" aria-labelledby="selected-hotel-title">
-        <div class="booking-property-image" aria-hidden="true">
-          <span class="sun"></span>
-          <span class="building building-one"></span>
-          <span class="building building-two"></span>
-        </div>
-
-        <div class="selected-hotel-copy">
-          <p class="section-kicker">Your selected hotel</p>
-          <h2 id="selected-hotel-title">{{ hotel.hotel_name }}</h2>
-          <p>{{ hotel.city }}, {{ hotel.state }}</p>
-          <dl>
-            <div>
-              <dt>Nightly rate</dt>
-              <dd>{{ currencyFormatter.format(hotel.nightly_rate_usd) }}</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
+    <div class="booking-checkout-grid">
       <form class="booking-form" novalidate @submit.prevent="confirmBooking">
         <div class="form-intro">
           <div>
@@ -195,6 +174,47 @@ watch([fullName, checkIn, checkOut], () => {
           {{ submissionError }}
         </p>
       </form>
+
+      <aside class="booking-hotel-panel" aria-label="Selected hotel and price details">
+        <section class="selected-hotel" aria-labelledby="selected-hotel-title">
+          <div class="booking-property-image" aria-hidden="true">
+            <span>Selected stay</span>
+          </div>
+
+          <div class="selected-hotel-copy">
+            <p class="section-kicker">Your selected hotel</p>
+            <h2 id="selected-hotel-title">{{ hotel.hotel_name }}</h2>
+            <p>{{ hotel.city }}, {{ hotel.state }}</p>
+            <div class="selected-stay-details">
+              <p v-if="checkIn && checkOut">
+                {{ checkIn }} – {{ checkOut }}
+                <strong v-if="nights">
+                  ({{ nights }} {{ nights === 1 ? 'night' : 'nights' }})
+                </strong>
+              </p>
+              <p v-else>Select your stay dates to calculate the trip total.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="price-details" aria-labelledby="price-details-title">
+          <h2 id="price-details-title">Price details</h2>
+          <dl>
+            <div>
+              <dt>Nightly rate</dt>
+              <dd>{{ currencyFormatter.format(hotel.nightly_rate_usd) }}</dd>
+            </div>
+            <div>
+              <dt>Length of stay</dt>
+              <dd>{{ nights ? `${nights} ${nights === 1 ? 'night' : 'nights'}` : 'Select dates' }}</dd>
+            </div>
+            <div class="price-total">
+              <dt>Estimated total</dt>
+              <dd>{{ nights ? currencyFormatter.format(totalCost) : '—' }}</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
     </div>
 
     <p class="booking-disclaimer">

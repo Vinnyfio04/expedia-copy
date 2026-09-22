@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { fetchHotels, searchHotels } from './api.js'
 import BookingHistory from './components/BookingHistory.vue'
 import BookingScreen from './components/BookingScreen.vue'
+import { getTopbarTravelAction } from './navigation.js'
 import { expediaHeaderLinks, travelProductLinks } from './travelLinks.js'
 
 
@@ -13,6 +14,8 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const selectedHotel = ref(null)
 const currentView = ref('stays')
+
+const topbarTravelAction = computed(() => getTopbarTravelAction(currentView.value))
 
 const resultSummary = computed(() => {
   const count = hotels.value.length
@@ -79,7 +82,7 @@ onMounted(() => loadHotels())
       'history-shell': currentView === 'history',
     }"
   >
-    <header v-if="currentView !== 'booking'" class="expedia-topbar">
+    <header class="expedia-topbar">
       <div class="topbar-inner">
         <div class="topbar-primary">
           <button
@@ -92,6 +95,7 @@ onMounted(() => loadHotels())
             <span>Expedia</span>
           </button>
           <a
+            v-if="currentView !== 'booking'"
             class="shop-travel-link"
             :href="expediaHeaderLinks.home"
             target="_blank"
@@ -102,56 +106,38 @@ onMounted(() => loadHotels())
         </div>
 
         <nav class="topbar-actions" aria-label="Expedia utility links">
-          <span class="currency-label">USD <span aria-hidden="true">• 🇺🇸</span></span>
-          <a :href="expediaHeaderLinks.property" target="_blank" rel="noreferrer">
-            List your property
-          </a>
-          <a :href="expediaHeaderLinks.support" target="_blank" rel="noreferrer">
-            Support
-          </a>
+          <template v-if="currentView !== 'booking'">
+            <span class="currency-label">USD <span aria-hidden="true">• 🇺🇸</span></span>
+            <a :href="expediaHeaderLinks.property" target="_blank" rel="noreferrer">
+              List your property
+            </a>
+            <a :href="expediaHeaderLinks.support" target="_blank" rel="noreferrer">
+              Support
+            </a>
+          </template>
           <button
             type="button"
-            :class="{ active: currentView === 'history' }"
-            :aria-current="currentView === 'history' ? 'page' : undefined"
-            @click="showView('history')"
+            @click="showView(topbarTravelAction.view)"
           >
-            Trips
+            {{ topbarTravelAction.label }}
           </button>
-          <span class="messages-icon" aria-label="Messages">
+          <span v-if="currentView !== 'booking'" class="messages-icon" aria-label="Messages">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M5 5.5h14v10H9l-4 3v-13Z" />
               <path d="M9 9h6M9 12h4" />
             </svg>
           </span>
-          <a :href="expediaHeaderLinks.signIn" target="_blank" rel="noreferrer">
+          <a
+            v-if="currentView !== 'booking'"
+            :href="expediaHeaderLinks.signIn"
+            target="_blank"
+            rel="noreferrer"
+          >
             Sign in
           </a>
         </nav>
       </div>
     </header>
-
-    <nav v-else class="site-navigation" aria-label="Primary navigation">
-      <button type="button" class="nav-brand" @click="showView('stays')">
-        <span aria-hidden="true">e</span>
-        expedia-copy
-      </button>
-      <div class="nav-links">
-        <button
-          type="button"
-          :aria-current="currentView === 'stays' ? 'page' : undefined"
-          @click="showView('stays')"
-        >
-          Stays
-        </button>
-        <button
-          type="button"
-          :aria-current="currentView === 'history' ? 'page' : undefined"
-          @click="showView('history')"
-        >
-          Booking history
-        </button>
-      </div>
-    </nav>
 
     <BookingScreen
       v-if="currentView === 'booking' && selectedHotel"
