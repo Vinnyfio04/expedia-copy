@@ -2,20 +2,22 @@
 
 ## View and controller boundary
 
-The Vue frontend owns what the user sees and manipulates. `App.vue` holds the
-search input and interface state, submits searches, formats nightly rates, and
-renders loading, error, result-count, empty, and table states. `api.js` keeps HTTP
-requests and response adaptation separate from the presentation component.
+The Vue frontend owns page state, user input, loading and error feedback, and
+presentation. `App.vue` coordinates the stays, booking, and booking-history
+views. Focused components handle booking, history, and the fixed ZIP lookup
+demonstration. `api.js` is the frontend HTTP boundary and sends every application
+request through the Vite `/api` proxy.
 
-The FastAPI backend owns access to the CSV data, API paths, validation, joining
-hotels to trips, and calculations. Its routes return JSON; they do not know how
-the Vue interface will display that data. The frontend does not open CSV files or
-call Python functions directly.
+The FastAPI backend owns API paths, validation, CSV access, joins, booking
+calculations and writes, and the Geoapify integration. The browser never reads
+CSV files, calls Python directly, or receives the Geoapify key. Backend
+configuration is loaded from the ignored project-root `.env` through
+`controller/app/config.py`.
 
 ## Current project-file map
 
-Generated and local dependency directories are intentionally omitted. Every path
-shown below exists in the current project, including this document.
+Generated output, dependency directories, caches, and the ignored `.env` file
+are intentionally omitted.
 
 ```text
 assignment1/
@@ -25,9 +27,10 @@ assignment1/
 |-- controller/
 |   |-- requirements.txt
 |   |-- app/
-|   |   |-- __init__.py
 |   |   |-- bookings.py
+|   |   |-- config.py
 |   |   |-- csv_store.py
+|   |   |-- geocoding.py
 |   |   |-- hotels.py
 |   |   |-- main.py
 |   |   |-- models.py
@@ -35,147 +38,175 @@ assignment1/
 |   |   |-- trips.py
 |   |   `-- users.py
 |   `-- tests/
-|       |-- __init__.py
-|       `-- test_csv_api.py
+|       |-- test_csv_api.py
+|       |-- test_geocoding.py
+|       `-- test_health.py
 |-- model/
 |   |-- README.md
 |   |-- bookings.csv
 |   |-- hotels.csv
-|   |-- relationships.png
-|   |-- relationships.svg
 |   |-- trips.csv
 |   `-- users.csv
+|-- view/
+|   |-- index.html
+|   |-- package-lock.json
+|   |-- package.json
+|   |-- vite.config.js
+|   |-- src/
+|   |   |-- App.vue
+|   |   |-- api.js
+|   |   |-- booking.js
+|   |   |-- history.js
+|   |   |-- main.js
+|   |   |-- navigation.js
+|   |   |-- style.css
+|   |   |-- travelLinks.js
+|   |   `-- components/
+|   |       |-- BookingHistory.vue
+|   |       |-- BookingScreen.vue
+|   |       `-- ZipLookupDemo.vue
+|   `-- tests/
+|       |-- api.test.js
+|       |-- booking.test.js
+|       |-- history.test.js
+|       |-- navigation.test.js
+|       `-- travelLinks.test.js
 |-- docs/
 |   |-- assignment_instructions.md
 |   |-- design-pipeline.md
 |   |-- report.md
-|   `-- images/
-|       |-- 01-expedia-original.png
-|       |-- 02-interface-skeleton.png
-|       |-- 03-data-and-logic.png
-|       |-- 04-four-layer-system-map.png
-|       `-- relationships.png
-|-- handoffs/
-|   `-- current.md
+|   |-- images/
+|   `-- video/
 |-- prompts/
 |   |-- 01-plan-the-implementation.md
 |   |-- 02-build-the-csv-search-api.md
 |   |-- 03-build-the-vue-hotel-search.md
 |   |-- 04-review-and-create-the-part1-checkpoint.md
 |   |-- 05-write-the-part1-report.md
-|   `-- 06-document-the-design-pipeline.md
-`-- view/
-    |-- index.html
-    |-- package-lock.json
-    |-- package.json
-    |-- vite.config.js
-    |-- src/
-    |   |-- App.vue
-    |   |-- api.js
-    |   |-- main.js
-    |   `-- style.css
-    `-- tests/
-        `-- api.test.js
+|   |-- 06-document-the-design-pipeline.md
+|   `-- 07-geoapify-implementation.md
+`-- handoffs/
+    `-- current.md
 ```
 
-## Search request flow
+## Hotel-search request flow
 
 The initial page load uses `fetchHotels()` and `GET /api/hotels`. A submitted
-hotel-name search follows this longer path:
+hotel-name search follows this path:
 
 ```text
-User enters a hotel name and submits the Vue form
-                         |
-                         v
-view/src/App.vue
-  submitSearch() trims the input
-  loadHotels() owns loading, success, and error state
-                         |
-                         v
-view/src/api.js
-  searchHotels() builds the encoded request
-                         |
-                         v
-GET /api/search?hotel_name=...
-                         |
-                         v
-controller/app/main.py
-  registered FastAPI search router
-                         |
-                         v
+Hotel name submitted in view/src/App.vue
+                    |
+                    v
+view/src/api.js searchHotels()
+                    |
+                    v
+GET /api/search?hotel_name=... through the Vite proxy
+                    |
+                    v
 controller/app/search.py
-  FastAPI search_hotels() route validates the request boundary
-                         |
-                         v
-  plain Python search_hotel_stays() calculation function
-       |                 |                 |
-       v                 v                 v
- list_hotels()       list_trips()      calculate nights and
- hotels.py           trips.py          total stay price
-       |                 |
-       `--------+--------'
-                v
-      csv_store.py reads hotels.csv and trips.csv
-                |
-                v
-      SearchResponse and HotelStay models
-                |
-                v
-FastAPI serializes the response as JSON
-                |
-                v
-view/src/api.js receives JSON and reduces repeated stays
-to unique hotel rows for the current table
-                |
-                v
-view/src/App.vue updates reactive state
-                |
-                v
-Result count, no-results message, and HTML table render
+  search_hotels() handles the HTTP boundary
+  search_hotel_stays() owns reusable search calculations
+                    |
+           +--------+--------+
+           v                 v
+   hotels.py             trips.py
+           |                 |
+           +--------+--------+
+                    v
+       csv_store.py reads model/*.csv
+                    |
+                    v
+    SearchResponse and HotelStay models
+                    |
+                    v
+FastAPI JSON -> api.js unique-hotel adaptation
+                    |
+                    v
+App.vue reactive state -> result count and hotel cards
 ```
 
-This separation keeps calculation details in Python and transport details in
-`api.js`, while `App.vue` remains focused on interaction and presentation.
+This separation leaves transport and presentation in Vue while Python owns CSV
+access, joins, validation, and stay-price calculations.
+
+## Geoapify ZIP demonstration flow
+
+The demonstration is intentionally fixed to ZIP `16802`; there is no ZIP input
+form or direct provider request from the browser.
+
+```text
+User clicks "Look up ZIP 16802"
+                    |
+                    v
+view/src/components/ZipLookupDemo.vue
+  clears the previous result
+  owns loading, success, and error state
+                    |
+                    v
+view/src/api.js lookupDemoZip()
+                    |
+                    v
+GET /api/demo/zip-location through view/vite.config.js
+                    |
+                    v
+controller/app/geocoding.py get_demo_zip_location()
+                    |
+                    v
+lookup_us_postcode("16802")
+  reads the key through controller/app/config.py
+  sends postcode, type=postcode, format=json,
+  and filter=countrycode:us to Geoapify with a finite timeout
+                    |
+                    v
+accept only an exact U.S. postcode match with valid coordinates
+                    |
+                    v
+PostcodeLocation JSON: postcode, country code,
+latitude, longitude, and optional locality
+                    |
+                    v
+ZipLookupDemo.vue renders fields or a sanitized backend error
+```
+
+The API key is used only in the backend-to-Geoapify request. The health endpoint
+reports only whether it is configured. The demo route distinguishes an
+unresolved postcode from a failed provider request and never returns provider
+request details, raw exception text, or credentials.
+
+## Booking and history flows
+
+Selecting a hotel changes `App.vue` state to show `BookingScreen.vue`. Booking
+submission uses `POST /api/bookings`; Python validates the request and appends
+linked user, trip, and booking rows. The history view calls
+`GET /api/bookings/history`, joins the CSV records, and renders them through
+`BookingHistory.vue`. Cancellation uses
+`PATCH /api/bookings/{booking_id}/cancel` and retains the booking record with an
+updated status.
+
+These flows are still CSV-backed. The assignment's SQLite persistence and
+frontend delete requirements remain future work.
 
 ## Agentic review loop
 
 ```text
 DESCRIBE
-  State the requested behavior and the acceptance evidence.
+  State the requested behavior and acceptance evidence.
      |
      v
 PREDICT THE BLAST RADIUS
-  Name the files and layers expected to change, plus those that must not change.
+  Name expected files and protected layers.
      |
      v
-PLAN
-  Order the smallest implementation and verification steps.
-     |
-     v
-IMPLEMENT
-  Make focused edits inside the predicted files.
-     |
-     v
-INSPECT THE GIT DIFF
-  Compare the actual changed-file list and content with the predicted radius.
-     |
-     v
-VERIFY BEHAVIOR
-  Run the relevant automated checks and exercise the user-visible flow.
-     |
-     v
-Does the diff stay in scope and does behavior match the description?
-     | yes                              | no
-     v                                  v
-COMMIT                           CORRECT THE IMPLEMENTATION
-  Preserve the verified          Update the description or plan when
-  checkpoint.                    the evidence exposes a wrong assumption,
-                                 then inspect and verify again.
-                                      |
-                                      `-------> INSPECT THE GIT DIFF
+PLAN -> IMPLEMENT -> INSPECT THE DIFF -> VERIFY BEHAVIOR
+                                         |
+                         +---------------+---------------+
+                         |                               |
+                    matches scope                   mismatch/failure
+                         |                               |
+                         v                               v
+                       COMMIT                    CORRECT AND REVERIFY
 ```
 
-The loop treats the diff and observed behavior as evidence. A passing check does
-not excuse an unexpected file change, and an in-scope diff does not replace
-behavior verification. Correction continues until both agree with the original
-description, after which the work is ready to commit.
+The diff and observed behavior are separate evidence. A passing automated check
+does not excuse an unexpected file change, and an in-scope diff does not replace
+live verification of the user-visible flow.
