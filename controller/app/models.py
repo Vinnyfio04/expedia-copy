@@ -78,3 +78,11 @@ class SearchResponse(BaseModel):
     query: str
     count: int
     results: list[HotelStay]
+
+
+class PostcodeLocation(BaseModel):
+    postcode: str
+    country_code: str
+    latitude: float
+    longitude: float
+    locality: str | None = None

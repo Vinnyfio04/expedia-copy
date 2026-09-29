@@ -5,8 +5,10 @@ async function requestJson(path, options) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
+    const detail = errorBody?.detail
+    const message = typeof detail === 'string' ? detail : detail?.message
     throw new Error(
-      errorBody?.detail ?? `Request failed with status ${response.status}.`,
+      message ?? `Request failed with status ${response.status}.`,
     )
   }
 
@@ -25,6 +27,10 @@ function hotelFromStay(stay) {
 
 export async function fetchHotels() {
   return requestJson('/hotels')
+}
+
+export async function lookupDemoZip() {
+  return requestJson('/demo/zip-location')
 }
 
 export async function fetchBookingHistory() {

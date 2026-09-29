@@ -6,6 +6,7 @@ import {
   createBooking,
   fetchBookingHistory,
   fetchHotels,
+  lookupDemoZip,
   searchHotels,
 } from '../src/api.js'
 
@@ -24,6 +25,39 @@ test('fetchHotels requests the hotel table', async (context) => {
 
   assert.deepEqual(await fetchHotels(), rows)
   assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/hotels')
+})
+
+test('lookupDemoZip requests the backend demonstration endpoint', async (context) => {
+  const location = {
+    postcode: '16802',
+    locality: 'State College',
+    latitude: 40.803167822,
+    longitude: -77.861384958,
+  }
+  const fetchMock = context.mock.fn(async () => jsonResponse(location))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await lookupDemoZip(), location)
+  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/demo/zip-location')
+})
+
+test('lookupDemoZip exposes the sanitized backend error message', async (context) => {
+  const fetchMock = context.mock.fn(async () => ({
+    ok: false,
+    status: 502,
+    json: async () => ({
+      detail: {
+        code: 'geocoding_provider_error',
+        message: 'The location provider is unavailable.',
+      },
+    }),
+  }))
+  globalThis.fetch = fetchMock
+
+  await assert.rejects(
+    lookupDemoZip(),
+    new Error('The location provider is unavailable.'),
+  )
 })
 
 test('fetchBookingHistory requests the joined read-only history', async (context) => {
