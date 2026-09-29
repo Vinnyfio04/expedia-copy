@@ -1,8 +1,8 @@
-"""Demo traveler data access and FastAPI routes."""
+"""Traveler business controller and FastAPI routes."""
 
 from fastapi import APIRouter
 
-from .csv_store import read_csv_rows
+from .database import get_database_controller
 from .models import User
 
 
@@ -10,8 +10,8 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 def list_users() -> list[User]:
-    """Read all demo travelers from the supplied CSV file."""
-    return [User(**row) for row in read_csv_rows("users.csv")]
+    """Return all travelers through the database controller contract."""
+    return get_database_controller().list_users()
 
 
 @router.get("", response_model=list[User])

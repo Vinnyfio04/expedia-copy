@@ -1,13 +1,13 @@
-"""Booking data access and FastAPI routes."""
+"""Booking business logic and FastAPI routes."""
 
 from datetime import date
 from threading import Lock
 
 from fastapi import APIRouter, HTTPException, status
 
-from .csv_store import append_csv_rows, read_csv_rows, update_csv_row
+from .database import RecordNotFoundError, get_database_controller
 from .hotels import list_hotels
-from .models import Booking, BookingCreate, BookingHistoryItem
+from .models import Booking, BookingCreate, BookingHistoryItem, Trip, User
 from .trips import list_trips
 from .users import list_users
 
@@ -17,7 +17,7 @@ booking_write_lock = Lock()
 
 
 def _next_identifier(prefix: str, identifiers: list[str]) -> str:
-    """Return the next zero-padded identifier for one CSV table."""
+    """Return the next zero-padded identifier for one model table."""
     suffixes = [
         int(identifier[len(prefix) :])
         for identifier in identifiers
@@ -27,8 +27,8 @@ def _next_identifier(prefix: str, identifiers: list[str]) -> str:
 
 
 def list_bookings() -> list[Booking]:
-    """Read all simulated bookings from the supplied CSV file."""
-    return [Booking(**row) for row in read_csv_rows("bookings.csv")]
+    """Return all simulated bookings through the database contract."""
+    return get_database_controller().list_bookings()
 
 
 def list_booking_history() -> list[BookingHistoryItem]:
@@ -106,32 +106,23 @@ def create_booking(
             None,
         )
 
-        rows_to_append: list[tuple[str, dict[str, str]]] = []
+        user_to_create: User | None = None
         if user is None:
             user_id = _next_identifier("U", [item.user_id for item in users])
-            rows_to_append.append(
-                (
-                    "users.csv",
-                    {"user_id": user_id, "display_name": full_name},
-                )
-            )
+            user_to_create = User(user_id=user_id, display_name=full_name)
         else:
             user_id = user.user_id
 
+        trip_to_create: Trip | None = None
         if trip is None:
             trip_id = _next_identifier("T", [item.trip_id for item in trips])
             trip_name = f"{hotel.hotel_name} stay"
-            rows_to_append.append(
-                (
-                    "trips.csv",
-                    {
-                        "trip_id": trip_id,
-                        "hotel_id": hotel.hotel_id,
-                        "trip_name": trip_name,
-                        "check_in": request.check_in.isoformat(),
-                        "check_out": request.check_out.isoformat(),
-                    },
-                )
+            trip_to_create = Trip(
+                trip_id=trip_id,
+                hotel_id=hotel.hotel_id,
+                trip_name=trip_name,
+                check_in=request.check_in,
+                check_out=request.check_out,
             )
         else:
             trip_id = trip.trip_id
@@ -143,20 +134,18 @@ def create_booking(
             [item.booking_id for item in bookings],
         )
         booking_date = booked_on or date.today()
-        rows_to_append.append(
-            (
-                "bookings.csv",
-                {
-                    "booking_id": booking_id,
-                    "user_id": user_id,
-                    "trip_id": trip_id,
-                    "booked_on": booking_date.isoformat(),
-                    "status": "confirmed",
-                },
-            )
+        booking = Booking(
+            booking_id=booking_id,
+            user_id=user_id,
+            trip_id=trip_id,
+            booked_on=booking_date,
+            status="confirmed",
         )
-
-        append_csv_rows(rows_to_append)
+        get_database_controller().create_booking_records(
+            user=user_to_create,
+            trip=trip_to_create,
+            booking=booking,
+        )
 
     nights = (request.check_out - request.check_in).days
     return BookingHistoryItem(
@@ -180,13 +169,20 @@ def create_booking(
 
 
 def cancel_booking(booking_id: str) -> BookingHistoryItem:
-    """Mark one booking as canceled while preserving its CSV row."""
+    """Mark one booking as canceled while preserving its database row."""
     with booking_write_lock:
-        update_csv_row(
-            "bookings.csv",
-            "booking_id",
-            booking_id,
-            {"status": "canceled"},
+        database = get_database_controller()
+        booking = database.get_booking(booking_id)
+        if booking is None:
+            raise RecordNotFoundError(f"Booking {booking_id} was not found.")
+        database.update_booking(
+            Booking(
+                booking_id=booking.booking_id,
+                user_id=booking.user_id,
+                trip_id=booking.trip_id,
+                booked_on=booking.booked_on,
+                status="canceled",
+            )
         )
         return next(
             booking
@@ -207,10 +203,10 @@ async def get_booking_history() -> list[BookingHistoryItem]:
     status_code=status.HTTP_201_CREATED,
 )
 async def post_booking(request: BookingCreate) -> BookingHistoryItem:
-    """Persist a confirmed booking and its related CSV records."""
+    """Persist a confirmed booking and its related database records."""
     try:
         return create_booking(request)
-    except LookupError as error:
+    except (LookupError, RecordNotFoundError) as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

@@ -16,3 +16,8 @@ dist/
 .vscode/
 .DS_Store
 
+# Generated application database
+model/*.db
+model/*.db-journal
+model/*.db-shm
+model/*.db-wal

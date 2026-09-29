@@ -40,7 +40,7 @@ In part 1, we had the general project framework set up along with a basic implem
 
 - **Canceling a trip**
   - Action: In the bookings tab, go down to the trip I just made and cancel it.
-  - Expected: The trip gets cancelled but remains in the list and the proper .csv file is updated.
+  - Expected: The trip gets cancelled but remains in the list and the database is updated.
   - Observed: After the cancel button is hit, the booking is grayed out and the cancel button says Cancelled. Confirmation of the cancellation is present.
   - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/06-cancellation-test.jpg
 

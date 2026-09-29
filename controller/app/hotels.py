@@ -1,8 +1,8 @@
-"""Hotel data access and FastAPI routes."""
+"""Hotel business controller and FastAPI routes."""
 
 from fastapi import APIRouter
 
-from .csv_store import read_csv_rows
+from .database import get_database_controller
 from .models import Hotel
 
 
@@ -10,8 +10,8 @@ router = APIRouter(prefix="/api/hotels", tags=["hotels"])
 
 
 def list_hotels() -> list[Hotel]:
-    """Read all hotels from the supplied CSV file."""
-    return [Hotel(**row) for row in read_csv_rows("hotels.csv")]
+    """Return all hotels through the database controller contract."""
+    return get_database_controller().list_hotels()
 
 
 @router.get("", response_model=list[Hotel])

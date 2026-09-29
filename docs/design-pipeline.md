@@ -8,9 +8,10 @@ views. Focused components handle booking, history, and the fixed ZIP lookup
 demonstration. `api.js` is the frontend HTTP boundary and sends every application
 request through the Vite `/api` proxy.
 
-The FastAPI backend owns API paths, validation, CSV access, joins, booking
-calculations and writes, and the Geoapify integration. The browser never reads
-CSV files, calls Python directly, or receives the Geoapify key. Backend
+The FastAPI backend owns API paths, validation, SQLite access, joins, booking
+calculations and writes, one-time SQL seeding, and the Geoapify integration. The
+browser never reads seed or database files, calls Python directly, or receives
+the Geoapify key. Backend
 configuration is loaded from the ignored project-root `.env` through
 `controller/app/config.py`.
 
@@ -29,7 +30,7 @@ assignment1/
 |   |-- app/
 |   |   |-- bookings.py
 |   |   |-- config.py
-|   |   |-- csv_store.py
+|   |   |-- database.py
 |   |   |-- geocoding.py
 |   |   |-- hotels.py
 |   |   |-- main.py
@@ -38,15 +39,12 @@ assignment1/
 |   |   |-- trips.py
 |   |   `-- users.py
 |   `-- tests/
-|       |-- test_csv_api.py
+|       |-- test_database_api.py
 |       |-- test_geocoding.py
 |       `-- test_health.py
 |-- model/
 |   |-- README.md
-|   |-- bookings.csv
-|   |-- hotels.csv
-|   |-- trips.csv
-|   `-- users.csv
+|   `-- seed.sql
 |-- view/
 |   |-- index.html
 |   |-- package-lock.json
@@ -75,6 +73,7 @@ assignment1/
 |   |-- assignment_instructions.md
 |   |-- design-pipeline.md
 |   |-- report.md
+|   |-- sqlite-mvc-branch-summary.md
 |   |-- images/
 |   `-- video/
 |-- prompts/
@@ -114,7 +113,8 @@ controller/app/search.py
            |                 |
            +--------+--------+
                     v
-       csv_store.py reads model/*.csv
+ database.py reads typed records from SQLite
+ (and applies model/seed.sql only on first use)
                     |
                     v
     SearchResponse and HotelStay models
@@ -126,8 +126,34 @@ FastAPI JSON -> api.js unique-hotel adaptation
 App.vue reactive state -> result count and hotel cards
 ```
 
-This separation leaves transport and presentation in Vue while Python owns CSV
-access, joins, validation, and stay-price calculations.
+This separation leaves transport and presentation in Vue while Python owns
+database access, joins, validation, and stay-price calculations.
+
+## Database initialization and persistence flow
+
+```text
+FastAPI startup or first database operation
+                    |
+                    v
+controller/app/database.py opens model/expedia.db
+  enables PRAGMA foreign_keys = ON
+  creates Hotel, User, Trip, and Booking tables when absent
+                    |
+                    v
+Is the seed metadata marker present?
+          | yes                         | no
+          v                             v
+ use stored SQLite state       apply model/seed.sql
+                                        |
+                                        v
+                             run PRAGMA foreign_key_check
+                             and record the seed marker
+```
+
+The database controller accepts and returns the Pydantic entity models from
+`controller/app/models.py`. It exposes CRUD for all four entities and enforces
+`hotels -> trips -> bookings` and `users -> bookings` through SQLite foreign
+keys. Business controllers use that contract and do not issue SQL themselves.
 
 ## Geoapify ZIP demonstration flow
 
@@ -176,15 +202,15 @@ request details, raw exception text, or credentials.
 ## Booking and history flows
 
 Selecting a hotel changes `App.vue` state to show `BookingScreen.vue`. Booking
-submission uses `POST /api/bookings`; Python validates the request and appends
-linked user, trip, and booking rows. The history view calls
-`GET /api/bookings/history`, joins the CSV records, and renders them through
+submission uses `POST /api/bookings`; Python validates the request and writes
+linked user, trip, and booking rows in one SQLite transaction. The history view calls
+`GET /api/bookings/history`, joins the database records, and renders them through
 `BookingHistory.vue`. Cancellation uses
 `PATCH /api/bookings/{booking_id}/cancel` and retains the booking record with an
 updated status.
 
-These flows are still CSV-backed. The assignment's SQLite persistence and
-frontend delete requirements remain future work.
+These flows are SQLite-backed. `model/seed.sql` is applied only to a new
+database and is not used by normal application operations.
 
 ## Agentic review loop
 

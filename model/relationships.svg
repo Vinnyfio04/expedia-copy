@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1130" viewBox="0 0 1600 1130" role="img" aria-labelledby="title desc">
-<title id="title">Expedia Lite: how the CSV files connect</title>
+<title id="title">Expedia Lite: how the SQLite tables connect</title>
 <desc id="desc">Hotels and users are source records. One hotel can be used in many trips. One trip can be referenced by many bookings, and one user can have many bookings. trips.hotel_id matches hotels.hotel_id. bookings.trip_id matches trips.trip_id. bookings.user_id matches users.user_id.</desc>
 <rect width="1600" height="1130" fill="#F6F8FB"/>
-<text x="60" y="81.38" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#19354D">Expedia Lite: how the CSV files connect</text>
+<text x="60" y="81.38" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#19354D">Expedia Lite: how the SQLite tables connect</text>
 <text x="60" y="123.25" font-family="Arial, sans-serif" font-size="25" font-weight="normal" fill="#456177">Match the IDs to combine information. Each arrow means one source row can have many references.</text>
 <rect x="60" y="175" width="630" height="352" rx="14" fill="#FFFFFF" stroke="#C3CDD8" stroke-width="2"/>
 <rect x="60" y="175" width="630" height="67" rx="14" fill="#19354D" stroke="none" stroke-width="2"/>
 <rect x="60" y="215" width="630" height="27" rx="0" fill="#19354D" stroke="none" stroke-width="2"/>
-<text x="84" y="217.92000000000002" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">hotels.csv</text>
+<text x="84" y="217.92000000000002" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">hotels</text>
 <text x="84" y="278.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">8 hotels</text>
 <text x="84" y="323.36" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#19354D">hotel_id</text>
 <text x="360" y="322.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#294D64">H001</text>
@@ -23,8 +23,8 @@
 <rect x="910" y="175" width="630" height="229" rx="14" fill="#FFFFFF" stroke="#C3CDD8" stroke-width="2"/>
 <rect x="910" y="175" width="630" height="67" rx="14" fill="#19354D" stroke="none" stroke-width="2"/>
 <rect x="910" y="215" width="630" height="27" rx="0" fill="#19354D" stroke="none" stroke-width="2"/>
-<text x="934" y="217.92000000000002" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">users.csv</text>
-<text x="934" y="278.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">6 demo travelers</text>
+<text x="934" y="217.92000000000002" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">users</text>
+<text x="934" y="278.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">11 demo travelers</text>
 <text x="934" y="323.36" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#19354D">user_id</text>
 <text x="1210" y="322.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#294D64">U001</text>
 <text x="1340" y="320.69" font-family="Arial, sans-serif" font-size="21" font-weight="normal" fill="#456177">unique ID</text>
@@ -33,8 +33,8 @@
 <rect x="60" y="672" width="630" height="352" rx="14" fill="#FFFFFF" stroke="#C3CDD8" stroke-width="2"/>
 <rect x="60" y="672" width="630" height="67" rx="14" fill="#19354D" stroke="none" stroke-width="2"/>
 <rect x="60" y="712" width="630" height="27" rx="0" fill="#19354D" stroke="none" stroke-width="2"/>
-<text x="84" y="714.92" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">trips.csv</text>
-<text x="84" y="775.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">12 offered hotel stays</text>
+<text x="84" y="714.92" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">trips</text>
+<text x="84" y="775.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">18 offered hotel stays</text>
 <text x="84" y="820.36" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#19354D">trip_id</text>
 <text x="360" y="819.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#294D64">T001</text>
 <text x="490" y="817.69" font-family="Arial, sans-serif" font-size="21" font-weight="normal" fill="#456177">unique ID</text>
@@ -50,8 +50,8 @@
 <rect x="910" y="672" width="630" height="352" rx="14" fill="#FFFFFF" stroke="#C3CDD8" stroke-width="2"/>
 <rect x="910" y="672" width="630" height="67" rx="14" fill="#19354D" stroke="none" stroke-width="2"/>
 <rect x="910" y="712" width="630" height="27" rx="0" fill="#19354D" stroke="none" stroke-width="2"/>
-<text x="934" y="714.92" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">bookings.csv</text>
-<text x="934" y="775.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">6 simulated reservations</text>
+<text x="934" y="714.92" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF">bookings</text>
+<text x="934" y="775.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#456177">12 simulated reservations</text>
 <text x="934" y="820.36" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#19354D">booking_id</text>
 <text x="1210" y="819.47" font-family="Arial, sans-serif" font-size="23" font-weight="normal" fill="#294D64">B001</text>
 <text x="1340" y="817.69" font-family="Arial, sans-serif" font-size="21" font-weight="normal" fill="#456177">unique ID</text>

@@ -218,7 +218,7 @@ watch([fullName, checkIn, checkOut], () => {
     </div>
 
     <p class="booking-disclaimer">
-      Confirming saves the traveler, stay, and booking to the local CSV data.
+      Confirming saves the traveler, stay, and booking to the local database.
     </p>
   </section>
 </template>

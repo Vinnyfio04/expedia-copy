@@ -6,18 +6,32 @@
 
 ```text
 .
-|-- controller/       FastAPI application and tests
+|-- controller/       Controller: FastAPI routes, business logic, and persistence
 |   |-- app/
-|   |   `-- main.py
+|   |   |-- database.py       SQLite schema, initialization, and CRUD
+|   |   |-- models.py         Typed entity and API contracts
+|   |   |-- bookings.py       Booking business logic and routes
+|   |   |-- hotels.py         Hotel controller and routes
+|   |   |-- trips.py          Trip controller and routes
+|   |   |-- users.py          User controller and routes
+|   |   |-- search.py         Hotel-search business logic and route
+|   |   |-- geocoding.py      Geoapify integration and demo route
+|   |   `-- main.py           FastAPI application and startup lifecycle
+|   |-- tests/                Backend persistence, API, and provider tests
 |   `-- requirements.txt
-|-- model/            CSV application data and relationship assets
-|-- view/             Vue application powered by Vite
+|-- model/            Model data: seed.sql, ignored expedia.db, and relationship assets
+|-- view/             View: Vue screens, browser state, API client, and CSS
 |   |-- src/
+|   |   |-- components/
+|   |   |-- api.js
+|   |   |-- App.vue
+|   |   `-- style.css
+|   |-- tests/
 |   |-- index.html
 |   |-- package.json
 |   `-- vite.config.js
-|-- docs/             Project documentation
-|-- prompts/          Selected project prompts
+|-- docs/             Requirements, architecture, reports, and branch summaries
+|-- prompts/          Selected implementation and verification prompts
 |-- handoffs/         Current project handoff
 `-- AGENTS.md          Project rules for coding agents
 ```
@@ -41,6 +55,24 @@ uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`. Its interactive documentation will be at `http://localhost:8000/docs`.
+
+### Database persistence
+
+The tracked `model/seed.sql` file contains the initial data. On the first database
+operation, `controller/app/database.py` creates `model/expedia.db`, enables
+SQLite foreign-key enforcement, creates the Hotel, User, Trip, and Booking
+tables, applies the SQL seed, and records that initialization completed. Later
+starts use the database without reapplying the seed, so database changes are
+not duplicated, overwritten, or restored after deletion.
+
+Python's standard-library `sqlite3` module provides the database driver; no
+separate SQLite server or Python package is required. The generated `.db` and
+SQLite sidecar files are ignored by Git. The database controller exposes typed
+create, read, update, and delete operations and checks references with
+`PRAGMA foreign_key_check`.
+
+The Vue application continues to use the existing `/api` JSON contracts and
+does not access SQLite or the seed files directly.
 
 ### Backend environment configuration
 
@@ -99,5 +131,6 @@ npm run build
 ## Project context
 
 - [Design and request pipeline](docs/design-pipeline.md)
+- [SQLite MVC branch summary](docs/sqlite-mvc-branch-summary.md)
 - [Selected project prompts](prompts/)
-- Project handoffs belong in `handoffs/` when that directory is created.
+- [Current project handoff](handoffs/current.md)

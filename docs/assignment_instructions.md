@@ -1,103 +1,53 @@
-# Assignment 1: Travel Application — CSV Search and SQLite CRUD
+Do not reference any assignment materials as you work. Simply use this doc as a check to ensure the project remains functional in the requirements and scope.
 
-> This document is a project reference containing the supplied assignment brief and figures. It records assignment requirements; it does not override repository-level instructions such as `AGENTS.md`.
+1. Objective
+Assignment 2 extends the existing hotel application from supplied local records to information obtained through a public API. A traveler enters a U.S. ZIP code, explores nearby hotels in a synchronized list and map, and saves selected places to a persistent shortlist.
 
-Adapt the course calculator project into a small local travel application. **Expedia Lite** is a suggested name; students may choose any application name. Use the chosen name consistently in the project folder, interface, and documentation. Each student submits an independently authored project.
+The objective is to integrate an external data source while preserving clear Model–View–Controller responsibilities, honest interface behavior, and repeatable verification. Students continue their Vue, FastAPI, and SQLite project. No Figma work, deployment, payment processing, or actual booking is required.
 
-Use Vue for the frontend, Python for the backend, and FastAPI for communication between them, with separate `frontend/` and `backend/` folders. A simple, readable interface is sufficient. Use the supplied demo travelers and simulated bookings; the scope is hotel stays, booking, and history.
+2. Scope
+Research and Early Mockups for Both Parts
+Before implementation of each part, students investigate relevant existing applications and API or library documentation. The research notes identify useful interaction patterns, weaknesses or omissions, and decisions adopted for the application, with links to the sources. Each part includes an early mockup showing its intended interaction and relevant states. A sketch or annotated image is sufficient; no specific design tool is required. Part 2 may build on the earlier research and mockup, with the additions or revisions for the shortlist clearly identified.
 
-## Requirements
+Part 1 — Live Hotel Search and Map
+The application accepts a five-digit U.S. ZIP code, including leading zeros. FastAPI uses Geoapify to resolve it to a U.S. postcode location and obtain hotels within 5 km of the returned point. The search center is that returned location, not the traveler’s position or every address within the ZIP area. A lookup that does not establish the requested U.S. ZIP code must not silently become a different-location search.
 
-### Assignment 1 requirements and submission checkpoints
+Vue presents the returned hotels as a list and on a Leaflet map. Selecting a hotel in either representation identifies the same hotel in the other. The layout and interaction design remain the student’s choices. Available names, locations, and coordinates must correspond to the response; missing fields require an honest label or omission. No invented prices, ratings, room availability, or booking confirmations are permitted.
 
-| Checkpoint | Part 1 — CSV Search | Part 2 — SQLite CRUD |
-| --- | --- | --- |
-| **Due** | Friday, September 11, 2026, at 11:59 PM ET. | Tuesday, September 15, 2026, at 11:59 PM ET. |
-| **Application behavior** | Provide a search input for a hotel name and a Search button. Display matching hotels and their available stays from the supplied data in a plain table with clear column labels. Show a clear message when no results match. | Provide search, simulated booking, and booking history. All CRUD actions must be performed through the frontend: create a new booking, read it in history, update its status to cancel it while retaining the record, and delete a test booking. |
-| **Data** | The Python backend reads `hotels.csv` and `trips.csv` and connects their records using `hotel_id`. FastAPI returns the matching records to the Vue frontend. | Seed a SQLite database with the supplied hotel, trip, user, and booking records. This is the initial data, not a fixed limit on the application's contents. After seeding, all application reads and writes use SQLite. Frontend actions send requests through FastAPI to the Python backend, which creates, retrieves, updates, and deletes the stored records. Users can add new bookings beyond the seeded examples. Preserve existing IDs and assign unique IDs to new records. |
-| **Verification** | Manually scan the changes in VS Code. Check a successful search using a hotel name from the supplied data and a search with no results in the browser. Record expected and observed results. | Manually scan the changes in VS Code. Demonstrate each CRUD action through the frontend, including records added after seeding. Verify that additions, updates, and deletions remain after a browser refresh and restarting the frontend and backend. Starting the app again must preserve saved changes without duplicating or reloading the starter records. |
-| **Git checkpoint** | Ask the agent to commit the reviewed work, push it to GitHub, and identify the exact Part 1 commit. | Develop substantial changes on a feature branch. Merge reviewed and checked work into `main`, check the combined app, and push the final commit. Preserve the Part 1 checkpoint. |
-| **Submission** | Upload `report.md` to Part 1 — Submission. | Upload the updated `report.md` to Part 2 — Submission. |
-| **Project context for both parts** | Keep `README.md` setup/run instructions, project-specific `AGENTS.md`, a brief design note in `docs/`, selected prompts in `prompts/`, and `handoffs/current.md` current. The design note explains frontend, FastAPI, and backend responsibilities. The handoff states what works, what was checked, remaining limitations, and the next task. Keep these files concise and consistent with the submitted commit. | Keep `README.md` setup/run instructions, project-specific `AGENTS.md`, a brief design note in `docs/`, selected prompts in `prompts/`, and `handoffs/current.md` current. The design note explains frontend, FastAPI, and backend responsibilities. The handoff states what works, what was checked, remaining limitations, and the next task. Keep these files concise and consistent with the submitted commit. |
+The interface distinguishes loading, results, invalid input, an unresolved ZIP code, no nearby results, and a failed request. It must not describe a service failure as an empty successful search. Geoapify geocoding and Places requests pass through FastAPI. Store API keys and credentials in a local .env file and add .env to .gitignore; the file must not be tracked or committed to version control. Leaflet displays map imagery from a tile provider. Any browser-visible tile credential must be intended for client use and appropriately restricted; the backend geocoding and Places key must not be copied into frontend configuration.
 
-Each part is worth 100 points, with equal weight in the 10% Assignment 1 group. Assessment follows the requirements and verification evidence in this table. The overview is not a separate submission.
+Part 2 — Persistent Shortlist and Verification
+The application can save a returned hotel, display the saved shortlist, and remove a saved hotel. SQLite preserves that state after both browser and backend restarts. Saving the same provider place identifier again must not create duplicate shortlist entries. The saved information remains recognizable when a later live response changes or becomes unavailable. External places need a documented data structure that accommodates their provider identifiers and coordinates without inventing the nightly rate required by the original sample Hotel model.
 
-Follow **CHECK → TAKE ACTION → VERIFY** when adding dependencies, as practiced in class.
+The project’s AGENTS.md records the MVC responsibilities and verification loop. Before adding a dependency, the agent must CHECK the existing environment, TAKE ACTION only after explaining the exact proposed installation and receiving the student’s approval, and VERIFY the result. Existing working behavior should be preserved.
 
-## Report Format
+Provider Information and Limits
+Geoapify GeocodingLinks to an external site. documents postcode lookup and country filtering; the Places APILinks to an external site. documents categories and geographic filters. These services provide location data, not proof of bookable rooms. Coverage and available fields vary; students must document result limits and avoid claiming an exhaustive hotel inventory. Map attribution must remain visible. The Leaflet documentationLinks to an external site. and Geoapify pricing and usage termsLinks to an external site. guide implementation and responsible request volume. No paid plan is required by this brief.
 
-For each part, upload a single file named `report.md`. Write actual Markdown with one level 1 heading (`#`) for the report title and level 2 headings (`##`) for its sections. Use this structure, replacing the bracketed text and the part number:
+3. Subproblems and Points
+The two parts are separate graded submissions, each worth 100 raw points. Together they total 200 raw points within the Assignment 2 group, which contributes 15% of the course grade. Each part therefore contributes 7.5% of the course grade.
 
-```markdown
-# [Chosen application name] — Part 1
+Assignment 2 submissions, deadlines, and points
+Submission	Required outcome	Due, Eastern Time	Points
+Part 1 — Live Hotel Search and Map	Research, early mockup, live hotel search and connected map, and recorded demonstration	Tuesday, September 29, 2026, 11:59 PM	100
+Part 2 — Persistent Shortlist and Verification	Research, early mockup, persistent shortlist and verification, and recorded demonstration	Tuesday, October 6, 2026, 11:59 PM	100
+Part 1 is submitted by September 29. Part 2 extends the same project and is submitted by October 6.
 
-## Repository and commit
+4. Evaluation Criteria
+Research and design: Decisions are supported by research and the early mockup; changes made during implementation are explained.
+Part 1 functionality: ZIP lookup returns the intended location, hotel results match the API response, list and map selections stay synchronized, and input or request problems receive clear feedback.
+Part 2 functionality: The shortlist supports saving and removal, prevents duplicates, and survives browser and backend restarts.
+Implementation quality: MVC responsibilities are clear, data is presented accurately, credentials are protected, and search and shortlist controls work with a keyboard.
+Verification: Claims are supported by expected-versus-observed results. Both parts include a live demonstration. Part 2 also uses a labeled fixed JSON sample for repeatable checks and SQLite evidence for persistence. Checks cover duplicate saves, removal, restarts, and simulated empty results, API failures, and quota or rate-limit responses without exhausting the service. They must not depend on a fixed live result count.
+5. Submission
+Part 1 — Submission: Due Tuesday, September 29, 2026, at 11:59 PM ET.
+Part 2 — Submission: Due Tuesday, October 6, 2026, at 11:59 PM ET.
+For each part, upload one report.md containing:
 
-[GitHub repository URL and the exact commit submitted for this part.]
-
-## Implementation
-
-[Briefly explain the implemented flow and the responsibilities of the frontend,
-FastAPI, and backend. For Part 2, summarize the changes since Part 1.]
-
-## Verification
-
-[Record the manual review and browser checks: action, expected result, and observed result.
-Embed or link screenshots stored in the repository using URLs the instructor can access.]
-
-## Project context and next steps
-
-[Link to the README, AGENTS.md, design note, selected prompts, and current handoff.
-State any remaining limitations and the next task.]
-```
-
-Use **Upload** on the appropriate submission page, attach `report.md`, and select **Submit Assignment**. Keep the report and its screenshots in the repository and ensure that the instructor can access every linked item.
-
-## Sample Data
-
-Download the instructor's sample travel data pack: `hotels.csv`, `trips.csv`, `users.csv`, and `bookings.csv`. A trip is one offered hotel stay with fixed dates. Each trip refers to one hotel through `hotel_id`; each booking refers to a demo traveler through `user_id` and a trip through `trip_id`. Every record also has its own unique ID. Several trips can reference the same hotel, and several bookings can reference the same traveler or trip.
-
-Hotels connect to trips through `hotel_id`. Trips and demo travelers connect to bookings through `trip_id` and `user_id`. Each record has its own unique ID.
-
-![Diagram of the sample CSV relationships among hotels, trips, users, and bookings](images/relationships.png)
-
-*Figure 5. The sample CSV relationships. One hotel can have several offered stays; one traveler can have several bookings. A booking connects a traveler to a trip.*
-
-Extract the ZIP before opening the CSV files in Excel. The included README explains the columns and sample records. Browse individual CSV files and the guide.
-
-## Decomposition Reference
-
-### Explore the Expedia example and the four application layers
-
-Week 1 introduced application decomposition: interface, logic, data, and persistence. Week 2 connected this view to visual references, project organization, manual review, Git, and browser verification.
-
-Use Expedia as an observable reference. Screenshots, annotations, and sketches can help communicate the intended interface. The example illustrates how to reason about an application; it does not require copying every visible feature.
-
-Nearly every application separates into the same four concerns. A visible screen is evidence of those layers, not the whole system. The interface can be observed directly; data, logic, and persistence must be inferred from the values shown, the decisions made, and what the application remembers.
-
-### The four layers behind an application screen
-
-| Layer | The question it answers | How to find it from the outside |
-| --- | --- | --- |
-| **Data** | What things exist in this system, and what does each know about itself? | Every noun the interface shows is a candidate: property, offer, traveler, booking, and itinerary. |
-| **Logic** | What decisions does the system make that the user does not? | Look for anything ranked, filtered, calculated, validated, classified, or refused. Why is this result shown first? |
-| **Persistence** | What survives? What is remembered after the tab closes? | Return later or sign in again. What remains was persisted; what disappeared may have existed only in the interface. |
-| **Interface** | What does the user see and manipulate? | This is the only layer that can be observed directly. Begin here, then infer what must exist underneath. |
-
-The following figures read one Expedia screen from the outside in.
-
-![Expedia mobile results screen showing selected dates and travelers, filter controls, two hotel cards, ratings, bundle savings, and package prices](images/01-expedia-original.png)
-
-*Figure 1. The evidence available from outside the application: one rendered results screen. Source: Expedia App Store listing. © Expedia Group.*
-
-![Annotated Expedia screen with blue outlines identifying the page header, filter controls, repeated result-card template, and reusable price module](images/02-interface-skeleton.png)
-
-*Figure 2. Interface structure: stable regions that organize changing content. Annotation adapted from the Expedia App Store image. © Expedia Group.*
-
-![Annotated Expedia screen with data values marked in green and logic outcomes marked in orange, including filters, ranking, refundability, and calculated savings](images/03-data-and-logic.png)
-
-*Figure 3. Data and logic share the screen but answer different questions: what the system knows and what it decides. Annotation adapted from the Expedia App Store image. © Expedia Group.*
-
-![Diagram showing a traveler interacting with an interface, the interface exchanging requests and ranked results with logic, logic querying data, and logic saving and retrieving persistent state](images/04-four-layer-system-map.png)
-
-*Figure 4. An inferred system view. The screen is an assembled result of four interacting layers, not the system itself.*
+Project access: Repository link, assessed commit, and startup and configuration instructions.
+Research notes: Sources consulted, useful and problematic features observed, and the resulting design decisions.
+Early mockup: An image or link to the design prepared before implementation, with a brief explanation of subsequent changes.
+Screen-recorded demo video: A link showing the running application and the required behavior of the submitted part.
+Verification record: Inputs or actions, expected results, observed results, and corrections or remaining limitations. Identify the tested ZIP and observation date for live searches; for Part 2, link the fixed JSON sample and give instructions for repeating its checks.
+AI disclosure and evidence log: Identify each tool, specific model, and its use. Include selected prompt excerpts linked to code changes, verification, and decisions, including at least one failed or revised approach. A full chat export is not required.
+All linked artifacts must be accessible to the instructor without an additional access request. Remove credentials and private information from the report, recordings, and evidence. The AI disclosure and evidence log are required under the syllabus policy and do not carry separate points.
