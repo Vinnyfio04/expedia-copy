@@ -1,69 +1,51 @@
-# expedia-copy — Part 2
+# expedia-copy — Assignment 2 part 1
 
-## Repository and commit
+## Project Access
 
-Repository: [github.com/Vinnyfio04/expedia-copy](https://github.com/Vinnyfio04/expedia-copy)
+## Research Notes
 
-Part 2 submission commit: [`f0f73d3dfa1da80f701b41ba48050bf3505d0aef`](https://github.com/Vinnyfio04/expedia-copy/commit/f0f73d3dfa1da80f701b41ba48050bf3505d0aef)
+ - ### What API?
+   - Geoapify
+ - ### Useful Interaction Patterns
+   - ZIP-code search bar above the map with search button
+   - Clear loading message when search is running
+   - When the user selects a hotel, the map is centered at the marker with its information listed
+   - List hotel cards of resulting hotels
+   - Highlight hotel cards when their marker is selected
 
-Commit message: `Add application test video`
+ - ### Weaknesses / Omissions
+   - Has access to place info but nothing about room availability
+   - Some data such as names, addresses, and other fields may be missing due to place-data coverage variability
+   - Geoapify free plan is 3,000 credits/day
+   - Leaflet requires tile provider
+     - OpenStreetMap is public intended for low-volume use
 
-## Implementation
+   - #### Sources
+     - Geoapify Docs: https://apidocs.geoapify.com/docs/places/
+     - Geoapify Pricing: https://www.geoapify.com/pricing/
+     - OpenTileMap Tile Policy: https://operations.osmfoundation.org/policies/tiles/
 
-In part 1, we had the general project framework set up along with a basic implementation of the application. The user could search hotels but they could not schedule any kind of trip. Since then, we implemented the bookings tab so the user can now select the hotel and plan a trip with the appropriate information.
+ - ### Design Decisions
+   - Geoapify converts ZIP code into coordinates
+     - Only accept result when it is accurate
+   - Search with Geoapify's built in hotel results with a hard coded 5 km circle filter
+   - Utilize FastAPI so API key is never exposed
+   - Display only information returned by the provider
+     - Display honest tags when data is missing
+   - Do not display
+     - invented prices, ratings, availability, or booking claims
+   - Utilize Leaflet with OpenStreetMap tiles
 
-## Verification
+   - #### Sources
+     - Geoapify Geocoding: https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/
+     - Geoapify Places Filters and Categories: https://apidocs.geoapify.com/docs/places/
+     - Leaflet Documentation: https://leafletjs.com/reference.html
 
-- **Initial page load**
-  - Action: Starting both the server and front end and inputting the URL
-  - Expected: The stays page loads and the hotels listed below showing the total number of hotels available.
-  - Observed: The stays page loaded with confirmation of "8 hotels found."
-  - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/08-initial-page-test.jpg
 
-- **Switching from stays to bookings tab**
-  - Action: Scrolling from the top and clicking "Trips" to enter the page
-  - Expected: The trips page gets loaded with all of the trips on the SQLite file.
-  - Observed: The trips page loaded and the list of bookings is visible. Confirmation of 10 bookings is listed on the site.
-  - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/09-trips-page-test.jpg
+## Early Mockup
 
-- **Successful search**
-  - Action: Go to the stays tab and search up "Metro" to get Metro Garden Hotel.
-  - Expected: Metro Garden Hotel shows up.
-  - Observed: Metro Garden Hotel shows up with confirmation of "1 hotel found."
-  - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/07-hotel-search-test.jpg
+## Screen-recorded demo video
 
-- **Booking a trip**
-  - Action: Select Metro Garden Hotel, input any date and the appropriate information, select confirm and see the confirmation message. Then go into trips to find the booking there.
-  - Expected: Hitting confirm sends the confirmation message and the trip is located under the trips tab.
-  - Observed: The scheduling page is loaded with the appropriate hotel information. When the proper information is entered and confirmed, a little message confirming the success appears. When switching to the booking history tab, I can see the trip I had just made.
-  - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/05-booking-test.jpg
+## Verification Record
 
-- **Canceling a trip**
-  - Action: In the bookings tab, go down to the trip I just made and cancel it.
-  - Expected: The trip gets cancelled but remains in the list and the database is updated.
-  - Observed: After the cancel button is hit, the booking is grayed out and the cancel button says Cancelled. Confirmation of the cancellation is present.
-  - Link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/06-cancellation-test.jpg
-
-## Verification screenshots
-
-- Initial stays page: [initial page test](images/08-initial-page-test.jpg)
-- Hotel-name search: [hotel search test](images/07-hotel-search-test.jpg)
-- Booking creation: [booking test](images/05-booking-test.jpg)
-- Trips and booking history: [trips page test](images/09-trips-page-test.jpg)
-- Persistent cancellation: [cancellation test](images/06-cancellation-test.jpg)
-
-## Project context and next steps
-
-- [README.md](https://github.com/Vinnyfio04/expedia-copy/blob/main/README.md)
-- [AGENTS.md](https://github.com/Vinnyfio04/expedia-copy/blob/main/AGENTS.md)
-- [Design and request pipeline](https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/design-pipeline.md)
-- [Selected project prompts](https://github.com/Vinnyfio04/expedia-copy/tree/main/prompts)
-- [Current handoff](https://github.com/Vinnyfio04/expedia-copy/blob/main/handoffs/current.md)
-
-Current limitation: There is no account system implemented.
-
-The next task would be to create account creation and management if we were to continue this further.
-
-## Demo Video
-
-- https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/video/application-test.mp4
+## AI Disclosure and Evidence Log
