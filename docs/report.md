@@ -136,10 +136,15 @@
       - Used codex for full agentic development. Used standard ChatGPT chat function to verify prompts and outputs to ensure requirements were met with each step.
     - #### Prompt Exerpts
       - Code Changes
-        - g
+        - "Move the whole zip code search and map below the old hotels list."
+          - Main page
+        - "add a gray footer"
+          - Bottom of the page
+        - "change it to Expedia-copy"
+          - Top left icon with application name
       - Verification
         - "Write a summary of all the changes made in this branch with a short explanation for each file. (File name - what was changed specifically). Report significant prompts in the /prompts folder. Make sure the appropriate docs are updated with the implemented MVC structure and the general folder structure."
       - Decisions
         - "Thoroughly read handoffs/currend.md before taking any further action to fully understand this next step. Verify requirements in the /docs folder as well as README and AGENTS to ensure the next course of action follows what is stated. We are going to be implementing the zip code search and map implementation. Analyze the zip-search-mockup jpeg in images/. This is what the general layout of this feature will look. It will be located where ZIP lookup demonstration is located in the project as of now. It will be replacing the ZIP lookup. We will follow a clear pipeline to efficiently implement this feature with quality. Ensure to not over-engineer the process. The feature must align with the following workflow: User submits a ZIP code -> Vue validates the input -> the frontend sends the ZIP code to FastAPI -> FastAPI finds the ZIP code’s coordinates -> FastAPI requests hotels within 5 km -> the hotel data is returned to Vue -> Vue displays the hotels in a list and as markers on the Leaflet map -> selecting a hotel updates both the list and map. Generate a plan to follow these requirements. Do not change any files, I will give my go-ahead when I have reviewed it. The first step should be installing dependencies for the required tools for this feature. Ask questions to clarify ambiguity before planning if any appears."
       - Revised Approach
-        - g
+        - "The implementation plan is approved in direction, but revise it with the following corrections before implementation. Do not change files until I explicitly give the go-ahead. [The rest of the prompt goes here, which was critiques on the suggested implementation plan, it was very long and weirdly formatted.]"

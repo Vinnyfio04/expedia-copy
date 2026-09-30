@@ -1530,7 +1530,7 @@ h1 {
 }
 
 .nearby-search {
-  margin-bottom: 2.5rem;
+  margin-top: 2.5rem;
   padding: 1.5rem;
   border: 1px solid #dfe2e8;
   border-radius: 1rem;
@@ -1792,6 +1792,21 @@ h1 {
 .hotel-results .empty-state {
   margin-right: 0;
   margin-left: 0;
+}
+
+.site-footer {
+  width: 100%;
+  padding: 1.75rem 1.25rem;
+  border-top: 1px solid #d0d5dd;
+  color: #59627a;
+  background: #e6e8eb;
+  text-align: center;
+}
+
+.site-footer p {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 650;
 }
 
 @media (max-width: 62rem) {

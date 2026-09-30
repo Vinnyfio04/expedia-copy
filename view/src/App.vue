@@ -93,7 +93,7 @@ onMounted(() => loadHotels())
             @click="showView('stays')"
           >
             <span class="expedia-mark" aria-hidden="true">↗</span>
-            <span>Expedia</span>
+            <span>Expedia-copy</span>
           </button>
           <a
             v-if="currentView !== 'booking'"
@@ -197,8 +197,6 @@ onMounted(() => loadHotels())
       </section>
 
       <section class="hotel-results" aria-labelledby="hotel-results-title">
-        <NearbyHotelSearch />
-
         <header class="results-heading">
           <div>
             <p>Explore stays</p>
@@ -259,7 +257,13 @@ onMounted(() => loadHotels())
           <h3>No hotels found</h3>
           <p>No hotels match that name. Try another search.</p>
         </div>
+
+        <NearbyHotelSearch />
       </section>
     </template>
+
+    <footer class="site-footer">
+      <p>Expedia-copy · Coursework travel demonstration · IST 402</p>
+    </footer>
   </main>
 </template>
