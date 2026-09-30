@@ -1,5 +1,14 @@
 const API_BASE = '/api'
 
+export class ApiError extends Error {
+  constructor(message, { status, code = null }) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 async function requestJson(path, options) {
   const response = await fetch(`${API_BASE}${path}`, options)
 
@@ -7,8 +16,13 @@ async function requestJson(path, options) {
     const errorBody = await response.json().catch(() => null)
     const detail = errorBody?.detail
     const message = typeof detail === 'string' ? detail : detail?.message
-    throw new Error(
+    const code = typeof detail === 'object' ? detail?.code : null
+    throw new ApiError(
       message ?? `Request failed with status ${response.status}.`,
+      {
+        status: response.status,
+        code: typeof code === 'string' ? code : null,
+      },
     )
   }
 
@@ -29,8 +43,10 @@ export async function fetchHotels() {
   return requestJson('/hotels')
 }
 
-export async function lookupDemoZip() {
-  return requestJson('/demo/zip-location')
+export async function searchNearbyHotels(postcode) {
+  return requestJson(
+    `/hotels/nearby?postcode=${encodeURIComponent(postcode)}`,
+  )
 }
 
 export async function fetchBookingHistory() {

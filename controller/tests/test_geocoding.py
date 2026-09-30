@@ -8,13 +8,11 @@ import httpx
 from app.geocoding import (
     GEOAPIFY_ENDPOINT,
     GEOAPIFY_TIMEOUT_SECONDS,
+    PROVIDER_RATE_LIMITED,
     GeocodingProviderError,
     PostcodeNotFoundError,
     lookup_us_postcode,
 )
-from app.main import app
-
-
 class PostcodeLookupTests(unittest.IsolatedAsyncioTestCase):
     def _client(self, response: Mock | None = None) -> AsyncMock:
         client = AsyncMock()
@@ -82,6 +80,27 @@ class PostcodeLookupTests(unittest.IsolatedAsyncioTestCase):
                 await lookup_us_postcode("16802")
 
     @patch("app.geocoding.get_geoapify_api_key", return_value="test-key")
+    async def test_preserves_a_leading_zero_postcode(self, _mock_key: Mock) -> None:
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "results": [
+                {
+                    "postcode": "02108",
+                    "country_code": "us",
+                    "lat": 42.357,
+                    "lon": -71.0637,
+                }
+            ]
+        }
+        client = self._client(response)
+
+        with patch("app.geocoding.httpx.AsyncClient", return_value=client):
+            location = await lookup_us_postcode("02108")
+
+        self.assertEqual(location.postcode, "02108")
+
+    @patch("app.geocoding.get_geoapify_api_key", return_value="test-key")
     async def test_sanitizes_provider_failure(self, _mock_key: Mock) -> None:
         client = self._client()
         client.get.side_effect = httpx.ConnectError("request failed")
@@ -93,63 +112,22 @@ class PostcodeLookupTests(unittest.IsolatedAsyncioTestCase):
             ):
                 await lookup_us_postcode("16802")
 
-
-class PostcodeRouteTests(unittest.IsolatedAsyncioTestCase):
-    async def _get_demo(self) -> httpx.Response:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport,
-            base_url="http://test",
-        ) as client:
-            return await client.get("/api/demo/zip-location")
-
-    @patch("app.geocoding.lookup_us_postcode", new_callable=AsyncMock)
-    async def test_demo_route_returns_location(self, mock_lookup: AsyncMock) -> None:
-        mock_lookup.return_value = {
-            "postcode": "16802",
-            "country_code": "US",
-            "latitude": 40.7982,
-            "longitude": -77.8599,
-            "locality": "University Park",
-        }
-
-        response = await self._get_demo()
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["postcode"], "16802")
-        mock_lookup.assert_awaited_once_with("16802")
-
-    @patch("app.geocoding.lookup_us_postcode", new_callable=AsyncMock)
-    async def test_demo_route_reports_unresolved_zip(
-        self,
-        mock_lookup: AsyncMock,
-    ) -> None:
-        mock_lookup.side_effect = PostcodeNotFoundError("No matching postcode.")
-
-        response = await self._get_demo()
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()["detail"]["code"], "postcode_not_found")
-
-    @patch("app.geocoding.lookup_us_postcode", new_callable=AsyncMock)
-    async def test_demo_route_sanitizes_provider_failure(
-        self,
-        mock_lookup: AsyncMock,
-    ) -> None:
-        mock_lookup.side_effect = GeocodingProviderError("sensitive detail")
-
-        response = await self._get_demo()
-
-        self.assertEqual(response.status_code, 502)
-        self.assertEqual(
-            response.json(),
-            {
-                "detail": {
-                    "code": "geocoding_provider_error",
-                    "message": "The location provider is unavailable.",
-                }
-            },
+    @patch("app.geocoding.get_geoapify_api_key", return_value="test-key")
+    async def test_preserves_provider_rate_limit_code(self, _mock_key: Mock) -> None:
+        request = httpx.Request("GET", GEOAPIFY_ENDPOINT)
+        provider_response = httpx.Response(429, request=request)
+        response = Mock()
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "rate limited",
+            request=request,
+            response=provider_response,
         )
+        client = self._client(response)
 
+        with patch("app.geocoding.httpx.AsyncClient", return_value=client):
+            with self.assertRaises(GeocodingProviderError) as raised:
+                await lookup_us_postcode("16802")
+
+        self.assertEqual(raised.exception.code, PROVIDER_RATE_LIMITED)
 if __name__ == "__main__":
     unittest.main()

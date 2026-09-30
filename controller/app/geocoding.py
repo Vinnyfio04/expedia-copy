@@ -4,7 +4,6 @@ from math import isfinite
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException
 
 from .config import get_geoapify_api_key
 from .models import PostcodeLocation
@@ -12,9 +11,8 @@ from .models import PostcodeLocation
 
 GEOAPIFY_ENDPOINT = "https://api.geoapify.com/v1/geocode/search"
 GEOAPIFY_TIMEOUT_SECONDS = 5.0
-DEMO_POSTCODE = "16802"
-
-router = APIRouter(prefix="/api/demo", tags=["demo"])
+PROVIDER_RATE_LIMITED = "provider_rate_limited"
+PROVIDER_UNAVAILABLE = "provider_unavailable"
 
 
 class PostcodeNotFoundError(LookupError):
@@ -23,6 +21,15 @@ class PostcodeNotFoundError(LookupError):
 
 class GeocodingProviderError(RuntimeError):
     """Raised when Geoapify is unavailable or returns an invalid response."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = PROVIDER_UNAVAILABLE,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def _coordinate(value: Any, minimum: float, maximum: float) -> float | None:
@@ -63,6 +70,16 @@ async def lookup_us_postcode(postcode: str) -> PostcodeLocation:
             response = await client.get(GEOAPIFY_ENDPOINT, params=params)
             response.raise_for_status()
             payload = response.json()
+    except httpx.HTTPStatusError as error:
+        code = (
+            PROVIDER_RATE_LIMITED
+            if error.response.status_code == 429
+            else PROVIDER_UNAVAILABLE
+        )
+        raise GeocodingProviderError(
+            "Geoapify request failed.",
+            code=code,
+        ) from None
     except (httpx.HTTPError, ValueError, TypeError):
         raise GeocodingProviderError("Geoapify request failed.") from None
 
@@ -93,23 +110,3 @@ async def lookup_us_postcode(postcode: str) -> PostcodeLocation:
     raise PostcodeNotFoundError(
         f"No U.S. location was found for postcode {requested_postcode}."
     )
-
-
-@router.get("/zip-location", response_model=PostcodeLocation)
-async def get_demo_zip_location() -> PostcodeLocation:
-    """Resolve the fixed demonstration postcode without exposing credentials."""
-    try:
-        return await lookup_us_postcode(DEMO_POSTCODE)
-    except PostcodeNotFoundError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "postcode_not_found", "message": str(error)},
-        ) from None
-    except GeocodingProviderError:
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "code": "geocoding_provider_error",
-                "message": "The location provider is unavailable.",
-            },
-        ) from None

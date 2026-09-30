@@ -1,28 +1,31 @@
 # expedia-copy Design Pipeline
 
-## View and controller boundary
+## MVC boundary
 
-The Vue frontend owns page state, user input, loading and error feedback, and
-presentation. `App.vue` coordinates the stays, booking, and booking-history
-views. Focused components handle booking, history, and the fixed ZIP lookup
-demonstration. `api.js` is the frontend HTTP boundary and sends every application
-request through the Vite `/api` proxy.
+The repository follows the MVC responsibilities recorded in `AGENTS.md`:
 
-The FastAPI backend owns API paths, validation, SQLite access, joins, booking
-calculations and writes, one-time SQL seeding, and the Geoapify integration. The
-browser never reads seed or database files, calls Python directly, or receives
-the Geoapify key. Backend
-configuration is loaded from the ignored project-root `.env` through
-`controller/app/config.py`.
+- **Model:** `controller/app/models.py` defines database entities and API
+  contracts. `model/seed.sql` is the immutable first-run SQLite seed, while the
+  generated `model/expedia.db` is ignored.
+- **View:** Vue components, browser state, Leaflet behavior, API helpers, and all
+  CSS stay under `view/src/`. The browser exchanges JSON only through `/api` and
+  never reads SQLite or receives the Geoapify credential.
+- **Controller:** FastAPI routes and business controllers stay under
+  `controller/app/`. `database.py` alone opens SQLite. `geocoding.py` resolves a
+  strict U.S. ZIP, and `nearby_hotels.py` owns the Geoapify Places request,
+  normalization, and nearby-search route.
+
+`App.vue` coordinates stays, booking, and booking-history screens.
+`NearbyHotelSearch.vue` owns ZIP input and result state, while `HotelMap.vue`
+owns Leaflet map creation, markers, popups, view changes, and cleanup.
 
 ## Current project-file map
 
-Generated output, dependency directories, caches, and the ignored `.env` file
-are intentionally omitted.
+Generated output, dependency directories, caches, the ignored `.env`, and the
+generated SQLite database are omitted.
 
 ```text
 assignment1/
-|-- .gitignore
 |-- AGENTS.md
 |-- README.md
 |-- controller/
@@ -35,20 +38,21 @@ assignment1/
 |   |   |-- hotels.py
 |   |   |-- main.py
 |   |   |-- models.py
+|   |   |-- nearby_hotels.py
 |   |   |-- search.py
 |   |   |-- trips.py
 |   |   `-- users.py
 |   `-- tests/
 |       |-- test_database_api.py
 |       |-- test_geocoding.py
-|       `-- test_health.py
+|       |-- test_health.py
+|       `-- test_nearby_hotels.py
 |-- model/
 |   |-- README.md
 |   `-- seed.sql
 |-- view/
-|   |-- index.html
-|   |-- package-lock.json
 |   |-- package.json
+|   |-- package-lock.json
 |   |-- vite.config.js
 |   |-- src/
 |   |   |-- App.vue
@@ -57,180 +61,171 @@ assignment1/
 |   |   |-- history.js
 |   |   |-- main.js
 |   |   |-- navigation.js
+|   |   |-- postcode.js
 |   |   |-- style.css
 |   |   |-- travelLinks.js
 |   |   `-- components/
 |   |       |-- BookingHistory.vue
 |   |       |-- BookingScreen.vue
-|   |       `-- ZipLookupDemo.vue
+|   |       |-- HotelMap.vue
+|   |       `-- NearbyHotelSearch.vue
 |   `-- tests/
 |       |-- api.test.js
 |       |-- booking.test.js
 |       |-- history.test.js
 |       |-- navigation.test.js
+|       |-- postcode.test.js
 |       `-- travelLinks.test.js
 |-- docs/
 |   |-- assignment_instructions.md
 |   |-- design-pipeline.md
 |   |-- report.md
 |   |-- sqlite-mvc-branch-summary.md
-|   |-- images/
-|   `-- video/
+|   `-- images/
+|       `-- 10-zip-code-search-mockup.jpg
 |-- prompts/
-|   |-- 01-plan-the-implementation.md
-|   |-- 02-build-the-csv-search-api.md
-|   |-- 03-build-the-vue-hotel-search.md
-|   |-- 04-review-and-create-the-part1-checkpoint.md
-|   |-- 05-write-the-part1-report.md
-|   |-- 06-document-the-design-pipeline.md
-|   `-- 07-geoapify-implementation.md
 `-- handoffs/
     `-- current.md
 ```
 
-## Hotel-search request flow
-
-The initial page load uses `fetchHotels()` and `GET /api/hotels`. A submitted
-hotel-name search follows this path:
+## Live ZIP-to-map flow
 
 ```text
-Hotel name submitted in view/src/App.vue
+User submits a five-character ZIP string
                     |
                     v
-view/src/api.js searchHotels()
+NearbyHotelSearch.vue + postcode.js
+  require exactly five ASCII digits
+  clear stale results and selectedPlaceId
                     |
                     v
-GET /api/search?hotel_name=... through the Vite proxy
+view/src/api.js searchNearbyHotels()
                     |
                     v
-controller/app/search.py
-  search_hotels() handles the HTTP boundary
-  search_hotel_stays() owns reusable search calculations
-                    |
-           +--------+--------+
-           v                 v
-   hotels.py             trips.py
-           |                 |
-           +--------+--------+
-                    v
- database.py reads typed records from SQLite
- (and applies model/seed.sql only on first use)
+GET /api/hotels/nearby?postcode=... through the Vite proxy
                     |
                     v
-    SearchResponse and HotelStay models
+controller/app/nearby_hotels.py
+  validates again and calls lookup_us_postcode()
                     |
                     v
-FastAPI JSON -> api.js unique-hotel adaptation
+controller/app/geocoding.py -> Geoapify Forward Geocoding
+  accept only the exact requested U.S. postcode
+  reject invalid or nonfinite coordinates
+                    |
+           unresolved? -- yes --> 404; do not call Places
+                    |
+                    no
+                    v
+Geoapify Places
+  categories=accommodation.hotel
+  filter=circle:<longitude>,<latitude>,5000
+  bias=proximity:<longitude>,<latitude>
+  limit=20
                     |
                     v
-App.vue reactive state -> result count and hotel cards
+normalize, skip malformed features, and stable-deduplicate by place_id
+                    |
+                    v
+NearbyHotelSearchResponse JSON
+  requested_postcode, center, radius_meters, count, results
+                    |
+                    v
+NearbyHotelSearch.vue renders a result list
+HotelMap.vue renders the center and Leaflet markers
+                    |
+                    v
+selectedPlaceId synchronizes card highlight, marker focus, and popup
 ```
 
-This separation leaves transport and presentation in Vue while Python owns
-database access, joins, validation, and stay-price calculations.
+The Geoapify key is read only by Python from the ignored project-root `.env`.
+The frontend never calls Geoapify directly. A successful empty result still
+returns the resolved center, allowing the map to display the search area with no
+hotel markers.
 
-## Database initialization and persistence flow
+## Nearby-hotel contract and errors
+
+`NearbyHotel` is deliberately separate from the priced SQLite `Hotel` entity.
+It contains only the provider, nonblank provider place ID, optional name and
+formatted address, valid coordinates, and an optional nonnegative provider
+distance. The application does not invent prices, ratings, availability,
+descriptions, or booking claims for external places.
+
+The route uses these externally meaningful error codes:
+
+- `invalid_postcode` with HTTP 400;
+- `postcode_not_found` with HTTP 404;
+- `provider_rate_limited` with HTTP 429; and
+- `provider_unavailable` with HTTP 502.
+
+Provider messages are sanitized. Credentials, credential-bearing URLs, raw
+provider bodies, and underlying exception text are never returned.
+
+## Leaflet and selection behavior
+
+The View uses plain Leaflet 1.9.4. `HotelMap.vue` imports no credentials and uses
+the replaceable HTTPS tile constant:
 
 ```text
-FastAPI startup or first database operation
-                    |
-                    v
-controller/app/database.py opens model/expedia.db
-  enables PRAGMA foreign_keys = ON
-  creates Hotel, User, Trip, and Booking tables when absent
-                    |
-                    v
-Is the seed metadata marker present?
-          | yes                         | no
-          v                             v
- use stored SQLite state       apply model/seed.sql
-                                        |
-                                        v
-                             run PRAGMA foreign_key_check
-                             and record the seed marker
+https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ```
 
-The database controller accepts and returns the Pydantic entity models from
-`controller/app/models.py`. It exposes CRUD for all four entities and enforces
-`hotels -> trips -> bookings` and `users -> bookings` through SQLite foreign
-keys. Business controllers use that contract and do not issue SQL themselves.
+The map keeps `© OpenStreetMap contributors` visible. Standard Leaflet marker
+assets are used through Vite. The application does not prefetch, bulk-download,
+proxy, or disable browser caching for tiles.
 
-## Geoapify ZIP demonstration flow
+One `selectedPlaceId` in `NearbyHotelSearch.vue` is the selection source of
+truth. Selecting a native-button card pans to and opens its marker without
+resetting zoom. Selecting a marker emits its place ID, highlights the matching
+card, and scrolls it into view. Popup content is built with DOM text nodes rather
+than provider-supplied HTML.
 
-The demonstration is intentionally fixed to ZIP `16802`; there is no ZIP input
-form or direct provider request from the browser.
+## Existing SQLite flows
 
-```text
-User clicks "Look up ZIP 16802"
-                    |
-                    v
-view/src/components/ZipLookupDemo.vue
-  clears the previous result
-  owns loading, success, and error state
-                    |
-                    v
-view/src/api.js lookupDemoZip()
-                    |
-                    v
-GET /api/demo/zip-location through view/vite.config.js
-                    |
-                    v
-controller/app/geocoding.py get_demo_zip_location()
-                    |
-                    v
-lookup_us_postcode("16802")
-  reads the key through controller/app/config.py
-  sends postcode, type=postcode, format=json,
-  and filter=countrycode:us to Geoapify with a finite timeout
-                    |
-                    v
-accept only an exact U.S. postcode match with valid coordinates
-                    |
-                    v
-PostcodeLocation JSON: postcode, country code,
-latitude, longitude, and optional locality
-                    |
-                    v
-ZipLookupDemo.vue renders fields or a sanitized backend error
-```
+Hotel-name search remains separate from live nearby matches. It reads the seeded
+SQLite Hotel and Trip records through FastAPI and retains its booking behavior.
+Selecting a seeded hotel opens `BookingScreen.vue`; booking submission writes
+linked user, trip, and booking rows transactionally. `BookingHistory.vue` reads
+the joined history, and cancellation updates status without deleting the record.
 
-The API key is used only in the backend-to-Geoapify request. The health endpoint
-reports only whether it is configured. The demo route distinguishes an
-unresolved postcode from a failed provider request and never returns provider
-request details, raw exception text, or credentials.
+`database.py` creates and seeds a new database once, enables foreign keys for
+every connection, and validates relationships with
+`PRAGMA foreign_key_check`. Restarting does not duplicate or restore rows.
 
-## Booking and history flows
+## Verification evidence
 
-Selecting a hotel changes `App.vue` state to show `BookingScreen.vue`. Booking
-submission uses `POST /api/bookings`; Python validates the request and writes
-linked user, trip, and booking rows in one SQLite transaction. The history view calls
-`GET /api/bookings/history`, joins the database records, and renders them through
-`BookingHistory.vue`. Cancellation uses
-`PATCH /api/bookings/{booking_id}/cancel` and retains the booking record with an
-updated status.
+Verification on 2026-09-29 produced the following observed results:
 
-These flows are SQLite-backed. `model/seed.sql` is applied only to a new
-database and is not used by normal application operations.
+- 38 backend `unittest` tests passed.
+- 20 frontend `node:test` tests passed.
+- `npm run lint` and `npm run build` passed.
+- Browser smoke tests covered invalid input, unresolved ZIP, successful empty
+  results, rate limiting, provider unavailability, keyboard operation,
+  responsive layout, and both list-to-marker and marker-to-list selection.
+- A live configured-key check of ZIP `16802` returned 20 capped nearby matches
+  on that date. This is an observation, not a fixed expected count.
+- Existing SQLite hotel search, booking, and history screens still opened and
+  worked during regression checking.
+- No browser console warnings or errors were observed.
+
+Automated tests mock Geoapify and consume no provider quota. Deterministic empty,
+rate-limit, and provider-failure browser states were exercised with a temporary
+in-memory mock backend, after which the normal live backend was restored.
 
 ## Agentic review loop
 
 ```text
-DESCRIBE
-  State the requested behavior and acceptance evidence.
-     |
-     v
-PREDICT THE BLAST RADIUS
-  Name expected files and protected layers.
-     |
-     v
-PLAN -> IMPLEMENT -> INSPECT THE DIFF -> VERIFY BEHAVIOR
-                                         |
-                         +---------------+---------------+
-                         |                               |
-                    matches scope                   mismatch/failure
-                         |                               |
-                         v                               v
-                       COMMIT                    CORRECT AND REVERIFY
+DESCRIBE -> PREDICT BLAST RADIUS -> PLAN -> IMPLEMENT
+                                              |
+                                              v
+                          INSPECT DIFF -> VERIFY BEHAVIOR
+                                              |
+                            +-----------------+-----------------+
+                            |                                   |
+                       matches scope                     mismatch/failure
+                            |                                   |
+                            v                                   v
+                          COMMIT                       CORRECT AND REVERIFY
 ```
 
 The diff and observed behavior are separate evidence. A passing automated check

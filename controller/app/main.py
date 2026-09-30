@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from .bookings import router as bookings_router
 from .config import is_geoapify_key_configured
 from .database import get_database_controller
-from .geocoding import router as geocoding_router
 from .hotels import router as hotels_router
+from .nearby_hotels import router as nearby_hotels_router
 from .search import router as search_router
 from .trips import router as trips_router
 from .users import router as users_router
@@ -27,11 +27,11 @@ app = FastAPI(
 )
 
 app.include_router(hotels_router)
+app.include_router(nearby_hotels_router)
 app.include_router(trips_router)
 app.include_router(users_router)
 app.include_router(bookings_router)
 app.include_router(search_router)
-app.include_router(geocoding_router)
 
 
 @app.get("/api/health", tags=["health"])

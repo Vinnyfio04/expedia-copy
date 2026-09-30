@@ -1,8 +1,15 @@
 """Response models shared by the expedia-copy API endpoints."""
 
 from datetime import date
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
+
+
+NonBlankString = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
 
 
 class Hotel(BaseModel):
@@ -86,3 +93,29 @@ class PostcodeLocation(BaseModel):
     latitude: float
     longitude: float
     locality: str | None = None
+
+
+class NearbyHotel(BaseModel):
+    """One external hotel place returned by Geoapify."""
+
+    provider: Literal["geoapify"]
+    provider_place_id: NonBlankString
+    name: str | None = None
+    formatted_address: str | None = None
+    latitude: float = Field(ge=-90.0, le=90.0, allow_inf_nan=False)
+    longitude: float = Field(ge=-180.0, le=180.0, allow_inf_nan=False)
+    distance_meters: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+    )
+
+
+class NearbyHotelSearchResponse(BaseModel):
+    """Typed Controller-to-View contract for a nearby-hotel search."""
+
+    requested_postcode: str
+    center: PostcodeLocation
+    radius_meters: Literal[5000] = 5000
+    count: int = Field(ge=0)
+    results: list[NearbyHotel]

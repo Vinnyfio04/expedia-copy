@@ -15,17 +15,19 @@
 |   |   |-- trips.py          Trip controller and routes
 |   |   |-- users.py          User controller and routes
 |   |   |-- search.py         Hotel-search business logic and route
-|   |   |-- geocoding.py      Geoapify integration and demo route
+|   |   |-- geocoding.py      Strict U.S. ZIP resolution through Geoapify
+|   |   |-- nearby_hotels.py  Nearby Places request, normalization, and route
 |   |   `-- main.py           FastAPI application and startup lifecycle
 |   |-- tests/                Backend persistence, API, and provider tests
 |   `-- requirements.txt
 |-- model/            Model data: seed.sql, ignored expedia.db, and relationship assets
 |-- view/             View: Vue screens, browser state, API client, and CSS
 |   |-- src/
-|   |   |-- components/
-|   |   |-- api.js
-|   |   |-- App.vue
-|   |   `-- style.css
+|   |   |-- components/       Booking, history, ZIP search, and Leaflet map
+|   |   |-- api.js            Browser-to-FastAPI JSON boundary
+|   |   |-- postcode.js       Pure five-digit ZIP validation
+|   |   |-- App.vue           Top-level view coordination
+|   |   `-- style.css         All application presentation
 |   |-- tests/
 |   |-- index.html
 |   |-- package.json
@@ -84,27 +86,44 @@ loads the updated configuration.
 `GET /api/health` reports whether the Geoapify API key is configured without
 returning its value. Geoapify is not called by the health check.
 
-### ZIP lookup controller contract
+### Live nearby-hotel contract
 
 `controller/app/geocoding.py` provides the async function
 `lookup_us_postcode(postcode)`. It sends a backend-only Geoapify forward-geocoding
-request constrained to U.S. postcode results and uses a five-second timeout. The
-`GET /api/demo/zip-location` endpoint calls it with the fixed demonstration input
-`"16802"`.
+request constrained to U.S. postcode results and uses a five-second timeout.
+The live route is:
+
+```text
+GET /api/hotels/nearby?postcode=16802
+```
 
 On success, the function returns the dedicated `PostcodeLocation` model with the
 postcode, uppercase country code, latitude, longitude, and an optional locality.
 A response is accepted only when its postcode exactly matches the request, its
 country code is U.S., and both coordinates are finite and within valid ranges.
 
-An unresolved or mismatched postcode raises `PostcodeNotFoundError`. Missing
-configuration, request failures, and malformed provider responses raise
-`GeocodingProviderError` with a sanitized message. The function does not expose
-the API key, provider response, request URL, or underlying exception text. The
-demo route returns HTTP 404 for an unresolved postcode and HTTP 502 with a
-sanitized message when the provider is unavailable. The Vue stays screen includes
-a small demonstration panel that calls this route through the existing `/api`
-development proxy.
+`controller/app/nearby_hotels.py` then requests the Geoapify Places
+`accommodation.hotel` category using a hard 5,000-meter circle, proximity bias,
+and a limit of 20. It skips malformed features, deduplicates by provider place
+ID without changing provider order, and returns the typed
+`NearbyHotelSearchResponse` contract. The results are nearby place matches, not
+an exhaustive hotel inventory, and do not claim prices, ratings, availability,
+or booking support.
+
+Malformed input returns HTTP 400. An unresolved or mismatched ZIP returns HTTP
+404 without making a Places request. Provider rate limiting returns HTTP 429;
+other configuration, connection, timeout, or invalid-provider-response failures
+return HTTP 502. All provider errors are sanitized: responses never include the
+API key, credential-bearing URL, raw body, or underlying exception text.
+
+The root `.env` must define `GEOAPIFY_API_KEY` for live nearby-hotel searches:
+
+```dotenv
+GEOAPIFY_API_KEY=your_geoapify_key
+```
+
+The key remains backend-only. Vue calls the FastAPI route through the Vite
+`/api` proxy.
 
 ## View setup
 
@@ -117,6 +136,18 @@ npm run dev
 ```
 
 Vite will print the local frontend URL, typically `http://localhost:5173`.
+`npm install` installs the pinned `leaflet` 1.9.4 runtime dependency recorded in
+`package.json` and `package-lock.json`; do not install a Vue Leaflet wrapper.
+
+The stays screen provides a five-digit ZIP form, a scrollable list of up to 20
+nearby Geoapify matches, and a Leaflet map. One provider place ID synchronizes
+list-card and marker selection. A successful search with no matches still shows
+the resolved center with no hotel markers.
+
+The map uses the OpenStreetMap Standard HTTPS tile URL and visibly displays
+`© OpenStreetMap contributors`. Public OpenStreetMap tiles are appropriate for
+this low-volume coursework demonstration, are best-effort, and must not be
+prefetched, bulk-downloaded, proxied, or served with browser caching disabled.
 
 ## View checks
 

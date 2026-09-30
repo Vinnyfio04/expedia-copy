@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  ApiError,
   cancelBooking,
   createBooking,
   fetchBookingHistory,
   fetchHotels,
-  lookupDemoZip,
+  searchNearbyHotels,
   searchHotels,
 } from '../src/api.js'
 
@@ -27,36 +28,48 @@ test('fetchHotels requests the hotel table', async (context) => {
   assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/hotels')
 })
 
-test('lookupDemoZip requests the backend demonstration endpoint', async (context) => {
-  const location = {
-    postcode: '16802',
-    locality: 'State College',
-    latitude: 40.803167822,
-    longitude: -77.861384958,
+test('searchNearbyHotels preserves a leading-zero ZIP in the API URL', async (context) => {
+  const result = {
+    requested_postcode: '02108',
+    radius_meters: 5000,
+    count: 0,
+    results: [],
   }
-  const fetchMock = context.mock.fn(async () => jsonResponse(location))
+  const fetchMock = context.mock.fn(async () => jsonResponse(result))
   globalThis.fetch = fetchMock
 
-  assert.deepEqual(await lookupDemoZip(), location)
-  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/demo/zip-location')
+  assert.deepEqual(await searchNearbyHotels('02108'), result)
+  assert.equal(
+    fetchMock.mock.calls[0].arguments[0],
+    '/api/hotels/nearby?postcode=02108',
+  )
 })
 
-test('lookupDemoZip exposes the sanitized backend error message', async (context) => {
+test('searchNearbyHotels preserves backend status, code, and message', async (context) => {
   const fetchMock = context.mock.fn(async () => ({
     ok: false,
-    status: 502,
+    status: 429,
     json: async () => ({
       detail: {
-        code: 'geocoding_provider_error',
-        message: 'The location provider is unavailable.',
+        code: 'provider_rate_limited',
+        message: 'The hotel provider is temporarily rate limited.',
       },
     }),
   }))
   globalThis.fetch = fetchMock
 
   await assert.rejects(
-    lookupDemoZip(),
-    new Error('The location provider is unavailable.'),
+    searchNearbyHotels('16802'),
+    (error) => {
+      assert.ok(error instanceof ApiError)
+      assert.equal(error.status, 429)
+      assert.equal(error.code, 'provider_rate_limited')
+      assert.equal(
+        error.message,
+        'The hotel provider is temporarily rate limited.',
+      )
+      return true
+    },
   )
 })
 

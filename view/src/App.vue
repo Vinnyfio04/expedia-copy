@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { fetchHotels, searchHotels } from './api.js'
 import BookingHistory from './components/BookingHistory.vue'
 import BookingScreen from './components/BookingScreen.vue'
-import ZipLookupDemo from './components/ZipLookupDemo.vue'
+import NearbyHotelSearch from './components/NearbyHotelSearch.vue'
 import { getTopbarTravelAction } from './navigation.js'
 import { expediaHeaderLinks, travelProductLinks } from './travelLinks.js'
 
@@ -197,7 +197,7 @@ onMounted(() => loadHotels())
       </section>
 
       <section class="hotel-results" aria-labelledby="hotel-results-title">
-        <ZipLookupDemo />
+        <NearbyHotelSearch />
 
         <header class="results-heading">
           <div>
