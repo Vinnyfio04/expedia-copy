@@ -4,7 +4,7 @@
 - ### Repository Link
   - https://github.com/Vinnyfio04/expedia-copy.git
 - ### Assessed Commit
-  - 
+  - 3adf9dd7651ec36787f5b7d6a2d8413b740b3fa5
 - ### Startup / Configuration Instructions
   - #### Prerequisites
     - Install the following:
@@ -103,30 +103,37 @@
 
 
 ## Early Mockup
+- GitHub link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/10-zip-code-search-mockup.jpg
+  - If link does not work, it is located in docs/images as image #10
 
 ## Screen-recorded demo video
+- Video: https://drive.google.com/file/d/1m-oPW4leGcQG-WsqDb9cY-WHBdG7fjL-/view?usp=sharing
 
 ## Verification Record
 - ### Searching ZIP Code
-  - <u>**Input:**</u>
-  - <u>**Expected:**</u>
-  - <u>**Corrections:**</u>
-  - <u>**Tested ZIP and Observation Date:**</u>
+  - <u>**Input:**</u> Input ZIP and hit search ZIP.
+  - <u>**Expected:**</u> The map and list will start loading and show results of hotels in the State College area.
+  - <u>**Actual:**</u> The map and list loaded and showed results of the hotels as hotel cards in the State College area.
+  - <u>**Corrections:**</u> Coordinate provider lost connection, had to start server and front end in a local network.
+  - <u>**Tested ZIP and Observation Date:**</u> ZIP: 16802, Observed 9/29/ 11:54pm
 - ### Searching Incorrect ZIP Code
-  - <u>**Input:**</u>
-  - <u>**Expected:**</u>
-  - <u>**Corrections:**</u>
-  - <u>**Tested ZIP and Observation Date:**</u>
+  - <u>**Input:**</u> Input invalid ZIP and hit search.
+  - <u>**Expected:**</u> The list and map do not update and an error pops up informing me it is not a proper ZIP code.
+  - <u>**Actual:**</u> The list and map do not update and a red text bar appears to alert me that the zip is not correct.
+  - <u>**Corrections:**</u> Worked as intended.
+  - <u>**Tested ZIP and Observation Date:**</u> ZIP: "aaaaa", Observed: 9/29 11:56pm
 - ### Selecting Hotel Card
-  - <u>**Input:**</u>
-  - <u>**Expected:**</u>
-  - <u>**Corrections:**</u>
-  - <u>**Tested ZIP and Observation Date:**</u>
+  - <u>**Input:**</u> Input ZIP and select a hotel via hotel card.
+  - <u>**Expected:**</u> The list updates with hotels in that ZIP code area. The card gets selected and the proper marker gets highlighted.
+  - <u>**Actual:**</u> What was expected, the list updated and the proper marker was selected. The border of the card was active to show it was selected.
+  - <u>**Corrections:**</u> No corrections needed.
+  - <u>**Tested ZIP and Observation Date:**</u> ZIP: 16802, Observed 9/29 11:58pm
 - ### Selecting Map Marker
-  - <u>**Input:**</u>
-  - <u>**Expected:**</u>
-  - <u>**Corrections:**</u>
-  - <u>**Tested ZIP and Observation Date:**</u>
+  - <u>**Input:**</u> Input ZIP and select a hotel via map marker.
+  - <u>**Expected:**</u> The list updates with hotels in that ZIP code area. The marker gets selected and the proper card gets highlighted.
+  - <u>**Actual:**</u> What was expected, the list updated and the proper card was selected. The border of the card was active to show it was selected.
+  - <u>**Corrections:**</u> No corrections needed.
+  - <u>**Tested ZIP and Observation Date:**</u> ZIP: 16802, Observed 9/29 11:59 pm
 
 ## AI Disclosure and Evidence Log
 - ### Tools Used
