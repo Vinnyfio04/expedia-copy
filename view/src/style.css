@@ -1629,6 +1629,25 @@ h1 {
   color: #b42318;
 }
 
+.nearby-result-source {
+  margin-top: 0.45rem !important;
+  color: #1668e3;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nearby-action-feedback {
+  margin-top: 0.45rem !important;
+  color: #067647;
+  font-weight: 700;
+}
+
+.nearby-action-feedback.error {
+  color: #b42318;
+}
+
 .nearby-results-layout {
   display: grid;
   grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.5fr);
@@ -1664,14 +1683,27 @@ h1 {
   color: #202a4d;
   background: #f4f6fb;
   text-align: left;
-  cursor: pointer;
 }
 
 .nearby-hotel-card:hover {
   background: #ebf2ff;
 }
 
-.nearby-hotel-card:focus-visible {
+.nearby-hotel-select {
+  display: grid;
+  width: 100%;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nearby-hotel-select:focus-visible {
+  border-radius: 0.35rem;
   outline: 3px solid rgba(22, 104, 227, 0.3);
   outline-offset: 2px;
 }
@@ -1697,6 +1729,96 @@ h1 {
 .nearby-hotel-card small:last-child {
   color: #1668e3;
   font-weight: 800;
+}
+
+.nearby-demo-data {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #d6dae3;
+}
+
+.nearby-demo-data > strong {
+  color: #6941c6;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nearby-demo-data ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nearby-demo-data li {
+  display: grid;
+  gap: 0.08rem;
+  padding: 0.45rem;
+  border-radius: 0.45rem;
+  background: #fff;
+  font-size: 0.76rem;
+}
+
+.nearby-demo-data time {
+  font-weight: 800;
+}
+
+.nearby-local-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #d6dae3;
+}
+
+.nearby-saved-state {
+  width: 100%;
+  color: #475467 !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.nearby-add-button,
+.nearby-remove-button {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.nearby-add-button {
+  border: 1px solid #1668e3;
+  color: #fff;
+  background: #1668e3;
+}
+
+.nearby-add-button:hover:not(:disabled) {
+  background: #0d50b5;
+}
+
+.nearby-remove-button {
+  border: 1px solid #b42318;
+  color: #b42318;
+  background: #fff;
+}
+
+.nearby-remove-button:hover:not(:disabled) {
+  background: #fff0ee;
+}
+
+.nearby-add-button:disabled,
+.nearby-remove-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .nearby-list-empty,

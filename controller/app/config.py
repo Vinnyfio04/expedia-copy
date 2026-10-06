@@ -21,3 +21,14 @@ def get_geoapify_api_key() -> str | None:
 def is_geoapify_key_configured() -> bool:
     """Return whether a nonblank Geoapify API key is configured."""
     return get_geoapify_api_key() is not None
+
+
+def get_liteapi_api_key() -> str | None:
+    """Return the configured LiteAPI key, or None when it is blank."""
+    api_key = os.getenv("LITEAPI_API_KEY", "").strip()
+    return api_key or None
+
+
+def is_liteapi_key_configured() -> bool:
+    """Return whether a nonblank LiteAPI key is configured."""
+    return get_liteapi_api_key() is not None

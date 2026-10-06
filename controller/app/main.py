@@ -4,10 +4,11 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 
 from .bookings import router as bookings_router
-from .config import is_geoapify_key_configured
+from .config import is_geoapify_key_configured, is_liteapi_key_configured
 from .database import get_database_controller
 from .hotels import router as hotels_router
 from .nearby_hotels import router as nearby_hotels_router
+from .saved_hotels import router as saved_hotels_router
 from .search import router as search_router
 from .trips import router as trips_router
 from .users import router as users_router
@@ -28,6 +29,7 @@ app = FastAPI(
 
 app.include_router(hotels_router)
 app.include_router(nearby_hotels_router)
+app.include_router(saved_hotels_router)
 app.include_router(trips_router)
 app.include_router(users_router)
 app.include_router(bookings_router)
@@ -42,4 +44,13 @@ async def health_check() -> dict[str, str]:
         if is_geoapify_key_configured()
         else "key is not configured"
     )
-    return {"status": "ok", "geoapify_api_key": key_status}
+    liteapi_key_status = (
+        "key is configured"
+        if is_liteapi_key_configured()
+        else "key is not configured"
+    )
+    return {
+        "status": "ok",
+        "geoapify_api_key": key_status,
+        "liteapi_api_key": liteapi_key_status,
+    }

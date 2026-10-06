@@ -17,6 +17,8 @@
 |   |   |-- search.py         Hotel-search business logic and route
 |   |   |-- geocoding.py      Strict U.S. ZIP resolution through Geoapify
 |   |   |-- nearby_hotels.py  Nearby Places request, normalization, and route
+|   |   |-- liteapi.py        Live rate lookup and conservative hotel matching
+|   |   |-- saved_hotels.py   Local save, ZIP lookup, and removal routes
 |   |   `-- main.py           FastAPI application and startup lifecycle
 |   |-- tests/                Backend persistence, API, and provider tests
 |   `-- requirements.txt
@@ -25,6 +27,7 @@
 |   |-- src/
 |   |   |-- components/       Booking, history, ZIP search, and Leaflet map
 |   |   |-- api.js            Browser-to-FastAPI JSON boundary
+|   |   |-- localHotels.js    Local-first nearby-hotel search coordination
 |   |   |-- postcode.js       Pure five-digit ZIP validation
 |   |   |-- App.vue           Top-level view coordination
 |   |   `-- style.css         All application presentation
@@ -76,6 +79,21 @@ create, read, update, and delete operations and checks references with
 The Vue application continues to use the existing `/api` JSON contracts and
 does not access SQLite or the seed files directly.
 
+Assignment 2 adds two additive persistence tables without changing the original
+Hotel, User, Trip, or Booking records. `saved_hotels` maps a Geoapify result's
+`provider_place_id`, `name`, `formatted_address`, `latitude`, and `longitude` to
+`hotel_id`, `name`, `address`, `latitude`, and `longitude`. `demo_hotel_nights`
+stores one fictional classroom rate and room count per saved hotel and ISO date;
+its SQL defaults are 10,000 cents ($100.00) and 20 rooms. These values do not
+come from Geoapify or LiteAPI. The schema uses repeatable `CREATE TABLE IF NOT
+EXISTS` statements, so startup adds the tables to an existing database and also
+creates them for a fresh database without replaying the immutable seed.
+
+`saved_hotel_locations` separately associates a saved provider ID with the ZIP,
+resolved search center, locality, and result distance where it was found. Its
+composite key prevents duplicate hotel/ZIP associations, and its foreign key
+keeps every association tied to a saved hotel.
+
 ### Backend environment configuration
 
 Backend environment settings belong in the project-root `.env` file. The helper at
@@ -83,8 +101,8 @@ Backend environment settings belong in the project-root `.env` file. The helper 
 helper's location. Restart the backend after editing `.env` so the running process
 loads the updated configuration.
 
-`GET /api/health` reports whether the Geoapify API key is configured without
-returning its value. Geoapify is not called by the health check.
+`GET /api/health` reports whether the Geoapify and LiteAPI keys are configured
+without returning either value. Neither provider is called by the health check.
 
 ### Live nearby-hotel contract
 
@@ -120,10 +138,59 @@ The root `.env` must define `GEOAPIFY_API_KEY` for live nearby-hotel searches:
 
 ```dotenv
 GEOAPIFY_API_KEY=your_geoapify_key
+LITEAPI_API_KEY=your_liteapi_sandbox_key
 ```
 
-The key remains backend-only. Vue calls the FastAPI route through the Vite
-`/api` proxy.
+Both keys remain backend-only. Vue calls FastAPI through the Vite `/api` proxy.
+Copy `.env.example` to `.env` for the expected variable names, keep the real
+values uncommitted, and restart FastAPI after changing them.
+
+### Date-specific nearby hotel rates
+
+The original Geoapify-only route remains unchanged. The rate-enriched route is:
+
+```text
+POST /api/hotels/nearby/rates
+```
+
+Its JSON body supplies `postcode`, `check_in`, `check_out`, and `adults`.
+Geoapify remains responsible for ZIP resolution, the nearby hotel list, distance,
+and map coordinates. The Controller sends the same center and 5,000-meter radius
+to LiteAPI with one room, USD, U.S. guest nationality, and one cheapest rate per
+hotel. It conservatively matches exact normalized hotel names and uses address or
+coordinates to reject ambiguous matches.
+
+LiteAPI returns a stay total. The API exposes that total and calculates an
+`average_nightly_rate` by dividing it by the number of nights. Rates are live,
+date-specific presentation data and are not written to SQLite. Unmatched or
+unavailable rates are `null`. A LiteAPI configuration or provider failure does
+not remove the Geoapify list or map; the response reports `rates_status` and
+continues with unpriced Geoapify results.
+
+### Local saved-hotel demo
+
+The local saved-hotel endpoints are:
+
+```text
+GET    /api/hotels/saved?postcode=16802
+POST   /api/hotels/saved
+DELETE /api/hotels/saved?hotel_id={provider_place_id}
+```
+
+The POST body contains one unchanged Geoapify hotel object and the resolved
+`search_location` returned by the nearby search. Saving is idempotent by provider
+ID. It preserves a separate ZIP/location association and creates fictional demo
+night rows for October 10–14, 2026 only when each row is missing. Existing rates
+and availability are never overwritten by a repeated save. DELETE removes only
+the selected saved hotel, its ZIP associations, and its demo nights in one
+transaction.
+
+The stays screen checks the local GET route first. Matching local hotels are
+shown with their stored map context and labeled as a saved subset, not a complete
+list for the area. Their $100.00 nightly rate and 20-room availability are
+explicitly labeled as simulated classroom data. Geoapify is called only after a
+successful local response containing no hotels; a failed local lookup does not
+fall through to the provider.
 
 ## View setup
 
@@ -142,7 +209,8 @@ Vite will print the local frontend URL, typically `http://localhost:5173`.
 The stays screen provides a five-digit ZIP form, a scrollable list of up to 20
 nearby Geoapify matches, and a Leaflet map. One provider place ID synchronizes
 list-card and marker selection. A successful search with no matches still shows
-the resolved center with no hotel markers.
+the resolved center with no hotel markers. LiteAPI rate enrichment is available
+through the backend route but is not displayed by the frontend.
 
 The map uses the OpenStreetMap Standard HTTPS tile URL and visibly displays
 `© OpenStreetMap contributors`. Public OpenStreetMap tiles are appropriate for

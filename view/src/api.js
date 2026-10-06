@@ -49,6 +49,32 @@ export async function searchNearbyHotels(postcode) {
   )
 }
 
+export async function searchSavedHotels(postcode) {
+  return requestJson(
+    `/hotels/saved?postcode=${encodeURIComponent(postcode)}`,
+  )
+}
+
+export async function saveHotelLocally(hotel, searchLocation) {
+  return requestJson('/hotels/saved', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      hotel,
+      search_location: searchLocation,
+    }),
+  })
+}
+
+export async function removeSavedHotel(hotelId) {
+  return requestJson(
+    `/hotels/saved?hotel_id=${encodeURIComponent(hotelId)}`,
+    { method: 'DELETE' },
+  )
+}
+
 export async function fetchBookingHistory() {
   return requestJson('/bookings/history')
 }

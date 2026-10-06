@@ -2,11 +2,24 @@
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 import sqlite3
-from typing import Iterator
+from typing import Iterable, Iterator
 
-from .models import Booking, Hotel, Trip, User
+from .models import (
+    Booking,
+    DemoHotelNight,
+    Hotel,
+    PostcodeLocation,
+    SaveNearbyHotelRequest,
+    SavedHotel,
+    SavedHotelLocation,
+    SavedHotelSearchResponse,
+    SavedNearbyHotel,
+    Trip,
+    User,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -60,6 +73,69 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (trip_id) REFERENCES trips (trip_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
+CREATE TABLE IF NOT EXISTS saved_hotels (
+    hotel_id TEXT NOT NULL PRIMARY KEY,
+    name TEXT,
+    address TEXT,
+    latitude REAL NOT NULL CHECK (
+        typeof(latitude) IN ('real', 'integer')
+        AND latitude BETWEEN -90.0 AND 90.0
+    ),
+    longitude REAL NOT NULL CHECK (
+        typeof(longitude) IN ('real', 'integer')
+        AND longitude BETWEEN -180.0 AND 180.0
+    )
+);
+
+CREATE TABLE IF NOT EXISTS demo_hotel_nights (
+    hotel_id TEXT NOT NULL,
+    stay_date TEXT NOT NULL CHECK (
+        stay_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+        AND stay_date IS date(stay_date)
+    ),
+    nightly_rate_cents INTEGER NOT NULL DEFAULT 10000 CHECK (
+        typeof(nightly_rate_cents) = 'integer'
+        AND nightly_rate_cents >= 0
+    ),
+    rooms_available INTEGER NOT NULL DEFAULT 20 CHECK (
+        typeof(rooms_available) = 'integer'
+        AND rooms_available >= 0
+    ),
+    PRIMARY KEY (hotel_id, stay_date),
+    FOREIGN KEY (hotel_id) REFERENCES saved_hotels (hotel_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS saved_hotel_locations (
+    hotel_id TEXT NOT NULL,
+    postcode TEXT NOT NULL CHECK (
+        postcode GLOB '[0-9][0-9][0-9][0-9][0-9]'
+    ),
+    country_code TEXT NOT NULL CHECK (country_code = 'US'),
+    search_latitude REAL NOT NULL CHECK (
+        typeof(search_latitude) IN ('real', 'integer')
+        AND search_latitude BETWEEN -90.0 AND 90.0
+    ),
+    search_longitude REAL NOT NULL CHECK (
+        typeof(search_longitude) IN ('real', 'integer')
+        AND search_longitude BETWEEN -180.0 AND 180.0
+    ),
+    locality TEXT,
+    distance_meters REAL CHECK (
+        distance_meters IS NULL
+        OR (
+            typeof(distance_meters) IN ('real', 'integer')
+            AND distance_meters >= 0.0
+        )
+    ),
+    PRIMARY KEY (hotel_id, postcode),
+    FOREIGN KEY (hotel_id) REFERENCES saved_hotels (hotel_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_hotel_locations_postcode
+    ON saved_hotel_locations (postcode, hotel_id);
 """
 
 
@@ -258,6 +334,340 @@ class DatabaseController:
                     raise RecordNotFoundError(f"Hotel {hotel_id} was not found.")
         except sqlite3.IntegrityError as error:
             _translate_integrity_error(error)
+
+    def _insert_saved_hotel(
+        self,
+        connection: sqlite3.Connection,
+        hotel: SavedHotel,
+    ) -> None:
+        connection.execute(
+            "INSERT INTO saved_hotels "
+            "(hotel_id, name, address, latitude, longitude) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                hotel.hotel_id,
+                hotel.name,
+                hotel.address,
+                hotel.latitude,
+                hotel.longitude,
+            ),
+        )
+
+    def create_saved_hotel(self, hotel: SavedHotel) -> SavedHotel:
+        """Persist one API hotel without changing its provider identifier."""
+        try:
+            with self._connection() as connection:
+                self._insert_saved_hotel(connection, hotel)
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+        return hotel
+
+    def get_saved_hotel(self, hotel_id: str) -> SavedHotel | None:
+        """Return one saved API hotel by exact provider identifier."""
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM saved_hotels WHERE hotel_id = ?",
+                (hotel_id,),
+            ).fetchone()
+        return SavedHotel(**dict(row)) if row is not None else None
+
+    def list_saved_hotels(self) -> list[SavedHotel]:
+        """Return saved API hotels in provider-identifier order."""
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM saved_hotels ORDER BY hotel_id"
+            ).fetchall()
+        return [SavedHotel(**dict(row)) for row in rows]
+
+    def update_saved_hotel(self, hotel: SavedHotel) -> SavedHotel:
+        """Update API hotel details without changing its provider identifier."""
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    "UPDATE saved_hotels SET name = ?, address = ?, "
+                    "latitude = ?, longitude = ? WHERE hotel_id = ?",
+                    (
+                        hotel.name,
+                        hotel.address,
+                        hotel.latitude,
+                        hotel.longitude,
+                        hotel.hotel_id,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise RecordNotFoundError(
+                        f"Saved hotel {hotel.hotel_id} was not found."
+                    )
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+        return hotel
+
+    def delete_saved_hotel(self, hotel_id: str) -> None:
+        """Delete a saved API hotel that has no demo-night references."""
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    "DELETE FROM saved_hotels WHERE hotel_id = ?",
+                    (hotel_id,),
+                )
+                if cursor.rowcount != 1:
+                    raise RecordNotFoundError(
+                        f"Saved hotel {hotel_id} was not found."
+                    )
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+
+    def _insert_demo_hotel_night(
+        self,
+        connection: sqlite3.Connection,
+        night: DemoHotelNight,
+    ) -> None:
+        connection.execute(
+            "INSERT INTO demo_hotel_nights "
+            "(hotel_id, stay_date, nightly_rate_cents, rooms_available) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                night.hotel_id,
+                night.stay_date.isoformat(),
+                night.nightly_rate_cents,
+                night.rooms_available,
+            ),
+        )
+
+    def create_demo_hotel_night(self, night: DemoHotelNight) -> DemoHotelNight:
+        """Persist fictional rate and availability for one saved-hotel night."""
+        try:
+            with self._connection() as connection:
+                self._insert_demo_hotel_night(connection, night)
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+        return night
+
+    def get_demo_hotel_night(
+        self,
+        hotel_id: str,
+        stay_date: date,
+    ) -> DemoHotelNight | None:
+        """Return one demo night by its composite identifier."""
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM demo_hotel_nights "
+                "WHERE hotel_id = ? AND stay_date = ?",
+                (hotel_id, stay_date.isoformat()),
+            ).fetchone()
+        return DemoHotelNight(**dict(row)) if row is not None else None
+
+    def list_demo_hotel_nights(
+        self,
+        hotel_id: str | None = None,
+    ) -> list[DemoHotelNight]:
+        """Return every demo night, optionally limited to one saved hotel."""
+        with self._connection() as connection:
+            if hotel_id is None:
+                rows = connection.execute(
+                    "SELECT * FROM demo_hotel_nights "
+                    "ORDER BY hotel_id, stay_date"
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM demo_hotel_nights "
+                    "WHERE hotel_id = ? ORDER BY stay_date",
+                    (hotel_id,),
+                ).fetchall()
+        return [DemoHotelNight(**dict(row)) for row in rows]
+
+    def update_demo_hotel_night(
+        self,
+        night: DemoHotelNight,
+    ) -> DemoHotelNight:
+        """Update fictional values without changing the hotel/date key."""
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    "UPDATE demo_hotel_nights SET nightly_rate_cents = ?, "
+                    "rooms_available = ? WHERE hotel_id = ? AND stay_date = ?",
+                    (
+                        night.nightly_rate_cents,
+                        night.rooms_available,
+                        night.hotel_id,
+                        night.stay_date.isoformat(),
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise RecordNotFoundError(
+                        "Demo hotel night "
+                        f"{night.hotel_id}/{night.stay_date.isoformat()} was not found."
+                    )
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+        return night
+
+    def delete_demo_hotel_night(self, hotel_id: str, stay_date: date) -> None:
+        """Delete one fictional nightly-rate and availability record."""
+        with self._connection() as connection:
+            cursor = connection.execute(
+                "DELETE FROM demo_hotel_nights "
+                "WHERE hotel_id = ? AND stay_date = ?",
+                (hotel_id, stay_date.isoformat()),
+            )
+            if cursor.rowcount != 1:
+                raise RecordNotFoundError(
+                    "Demo hotel night "
+                    f"{hotel_id}/{stay_date.isoformat()} was not found."
+                )
+
+    def _insert_saved_hotel_location(
+        self,
+        connection: sqlite3.Connection,
+        location: SavedHotelLocation,
+    ) -> None:
+        connection.execute(
+            "INSERT INTO saved_hotel_locations "
+            "(hotel_id, postcode, country_code, search_latitude, "
+            "search_longitude, locality, distance_meters) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (hotel_id, postcode) DO NOTHING",
+            (
+                location.hotel_id,
+                location.postcode,
+                location.country_code,
+                location.search_latitude,
+                location.search_longitude,
+                location.locality,
+                location.distance_meters,
+            ),
+        )
+
+    def save_nearby_hotel(
+        self,
+        request: SaveNearbyHotelRequest,
+        stay_dates: Iterable[date],
+    ) -> SavedNearbyHotel:
+        """Idempotently save an API hotel, search context, and demo nights."""
+        hotel = SavedHotel.from_nearby_hotel(request.hotel)
+        location = SavedHotelLocation.from_search(
+            request.hotel,
+            request.search_location,
+        )
+        dates = tuple(stay_dates)
+
+        try:
+            with self._connection() as connection:
+                connection.execute(
+                    "INSERT INTO saved_hotels "
+                    "(hotel_id, name, address, latitude, longitude) "
+                    "VALUES (?, ?, ?, ?, ?) "
+                    "ON CONFLICT (hotel_id) DO NOTHING",
+                    (
+                        hotel.hotel_id,
+                        hotel.name,
+                        hotel.address,
+                        hotel.latitude,
+                        hotel.longitude,
+                    ),
+                )
+                self._insert_saved_hotel_location(connection, location)
+                connection.executemany(
+                    "INSERT INTO demo_hotel_nights (hotel_id, stay_date) "
+                    "VALUES (?, ?) "
+                    "ON CONFLICT (hotel_id, stay_date) DO NOTHING",
+                    [(hotel.hotel_id, stay_date.isoformat()) for stay_date in dates],
+                )
+        except sqlite3.IntegrityError as error:
+            _translate_integrity_error(error)
+
+        search = self.get_saved_hotel_search(location.postcode)
+        saved = next(
+            (
+                result
+                for result in search.results
+                if result.provider_place_id == hotel.hotel_id
+            ),
+            None,
+        )
+        if saved is None:
+            raise DatabaseControllerError("The saved hotel could not be reloaded.")
+        return saved
+
+    def get_saved_hotel_search(self, postcode: str) -> SavedHotelSearchResponse:
+        """Return local saved results for one ZIP and all saved provider IDs."""
+        with self._connection() as connection:
+            hotel_rows = connection.execute(
+                "SELECT h.hotel_id, h.name, h.address, h.latitude, h.longitude, "
+                "l.postcode, l.country_code, l.search_latitude, "
+                "l.search_longitude, l.locality, l.distance_meters "
+                "FROM saved_hotel_locations AS l "
+                "JOIN saved_hotels AS h ON h.hotel_id = l.hotel_id "
+                "WHERE l.postcode = ? ORDER BY h.hotel_id",
+                (postcode,),
+            ).fetchall()
+            saved_hotel_ids = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT hotel_id FROM saved_hotels ORDER BY hotel_id"
+                ).fetchall()
+            ]
+
+            results: list[SavedNearbyHotel] = []
+            for row in hotel_rows:
+                nights = [
+                    DemoHotelNight(**dict(night_row))
+                    for night_row in connection.execute(
+                        "SELECT * FROM demo_hotel_nights "
+                        "WHERE hotel_id = ? ORDER BY stay_date",
+                        (row["hotel_id"],),
+                    ).fetchall()
+                ]
+                results.append(
+                    SavedNearbyHotel(
+                        provider="geoapify",
+                        provider_place_id=row["hotel_id"],
+                        name=row["name"],
+                        formatted_address=row["address"],
+                        latitude=row["latitude"],
+                        longitude=row["longitude"],
+                        distance_meters=row["distance_meters"],
+                        demo_nights=nights,
+                    )
+                )
+
+        center = None
+        if hotel_rows:
+            first = hotel_rows[0]
+            center = PostcodeLocation(
+                postcode=first["postcode"],
+                country_code=first["country_code"],
+                latitude=first["search_latitude"],
+                longitude=first["search_longitude"],
+                locality=first["locality"],
+            )
+        return SavedHotelSearchResponse(
+            requested_postcode=postcode,
+            center=center,
+            count=len(results),
+            results=results,
+            saved_hotel_ids=saved_hotel_ids,
+        )
+
+    def delete_saved_hotel_with_related(self, hotel_id: str) -> None:
+        """Atomically delete one saved hotel, its locations, and demo nights."""
+        with self._connection() as connection:
+            connection.execute(
+                "DELETE FROM demo_hotel_nights WHERE hotel_id = ?",
+                (hotel_id,),
+            )
+            connection.execute(
+                "DELETE FROM saved_hotel_locations WHERE hotel_id = ?",
+                (hotel_id,),
+            )
+            cursor = connection.execute(
+                "DELETE FROM saved_hotels WHERE hotel_id = ?",
+                (hotel_id,),
+            )
+            if cursor.rowcount != 1:
+                raise RecordNotFoundError(
+                    f"Saved hotel {hotel_id} was not found."
+                )
 
     def _insert_user(
         self,

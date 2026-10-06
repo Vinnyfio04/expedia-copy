@@ -1,5 +1,6 @@
 """Geoapify nearby-hotel normalization for the live postcode search."""
 
+from datetime import date
 from math import isfinite
 import re
 from typing import Any
@@ -16,7 +17,18 @@ from .geocoding import (
     PostcodeNotFoundError,
     lookup_us_postcode,
 )
-from .models import NearbyHotel, NearbyHotelSearchResponse, PostcodeLocation
+from .liteapi import (
+    LiteApiProviderError,
+    attach_liteapi_rates,
+    request_liteapi_rates,
+)
+from .models import (
+    NearbyHotel,
+    NearbyHotelRateSearchRequest,
+    NearbyHotelRateSearchResponse,
+    NearbyHotelSearchResponse,
+    PostcodeLocation,
+)
 
 
 GEOAPIFY_PLACES_ENDPOINT = "https://api.geoapify.com/v2/places"
@@ -181,4 +193,77 @@ async def get_nearby_hotels(postcode: str = "") -> NearbyHotelSearchResponse:
         radius_meters=NEARBY_RADIUS_METERS,
         count=len(hotels),
         results=hotels,
+    )
+
+
+@router.post("/nearby/rates", response_model=NearbyHotelRateSearchResponse)
+async def get_nearby_hotel_rates(
+    request: NearbyHotelRateSearchRequest,
+) -> NearbyHotelRateSearchResponse:
+    """Return Geoapify nearby hotels enriched with optional LiteAPI rates."""
+    if POSTCODE_PATTERN.fullmatch(request.postcode) is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "invalid_postcode",
+                "message": "Enter a five-digit U.S. ZIP code.",
+            },
+        )
+    if request.check_in < date.today() or request.check_out <= request.check_in:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "invalid_stay_dates",
+                "message": "Choose a check-in today or later and a later check-out date.",
+            },
+        )
+
+    try:
+        center = await lookup_us_postcode(request.postcode)
+        hotels = await request_geoapify_hotels(center)
+    except PostcodeNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "postcode_not_found",
+                "message": str(error),
+            },
+        ) from None
+    except GeocodingProviderError as error:
+        raise _provider_http_error(error) from None
+
+    rates_status = "no_availability"
+    rated_hotels = attach_liteapi_rates(hotels, [])
+    if hotels:
+        try:
+            offers = await request_liteapi_rates(
+                center,
+                request.check_in,
+                request.check_out,
+                request.adults,
+                NEARBY_RADIUS_METERS,
+            )
+            rated_hotels = attach_liteapi_rates(hotels, offers)
+            matched_count = sum(hotel.rate is not None for hotel in rated_hotels)
+            if matched_count == len(rated_hotels):
+                rates_status = "available"
+            elif matched_count:
+                rates_status = "partial"
+        except LiteApiProviderError as error:
+            rates_status = (
+                "not_configured"
+                if error.code == "not_configured"
+                else "provider_unavailable"
+            )
+
+    return NearbyHotelRateSearchResponse(
+        requested_postcode=request.postcode,
+        center=center,
+        radius_meters=NEARBY_RADIUS_METERS,
+        check_in=request.check_in,
+        check_out=request.check_out,
+        adults=request.adults,
+        rates_status=rates_status,
+        count=len(rated_hotels),
+        results=rated_hotels,
     )

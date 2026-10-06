@@ -3,6 +3,7 @@
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import sqlite3
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -12,12 +13,22 @@ import httpx
 from app.bookings import cancel_booking, create_booking, list_booking_history, list_bookings
 from app.database import (
     DatabaseController,
+    DuplicateRecordError,
     ReferencedRecordError,
     get_database_controller,
 )
 from app.hotels import list_hotels
 from app.main import app
-from app.models import Booking, BookingCreate, Hotel, Trip, User
+from app.models import (
+    Booking,
+    BookingCreate,
+    DemoHotelNight,
+    Hotel,
+    NearbyHotel,
+    SavedHotel,
+    Trip,
+    User,
+)
 from app.search import search_hotel_stays
 from app.trips import list_trips
 from app.users import list_users
@@ -46,6 +57,8 @@ class DatabaseSeedTests(TemporaryApplicationDatabaseTestCase):
         self.assertGreaterEqual(len(list_trips()), 12)
         self.assertGreaterEqual(len(list_users()), 6)
         self.assertGreaterEqual(len(list_bookings()), 6)
+        self.assertEqual(get_database_controller().list_saved_hotels(), [])
+        self.assertEqual(get_database_controller().list_demo_hotel_nights(), [])
         self.assertEqual(get_database_controller().check_references(), [])
 
     def test_does_not_restore_a_deleted_seed_record(self) -> None:
@@ -163,6 +176,147 @@ class DatabaseCrudTests(unittest.TestCase):
 
             with self.assertRaises(ReferencedRecordError):
                 database.create_trip(invalid_trip)
+
+
+class SavedHotelPersistenceTests(unittest.TestCase):
+    def test_maps_api_hotel_and_enforces_demo_night_relationships(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "saved-hotels.db"
+            database = DatabaseController(database_path, seed_path=None)
+            api_hotel = NearbyHotel(
+                provider="geoapify",
+                provider_place_id="geo:Case-Sensitive/001",
+                name=None,
+                formatted_address=None,
+                latitude=40.7982,
+                longitude=-77.8599,
+            )
+            saved_hotel = SavedHotel.from_nearby_hotel(api_hotel)
+            night = DemoHotelNight(
+                hotel_id=saved_hotel.hotel_id,
+                stay_date=date(2026, 11, 10),
+            )
+
+            self.assertEqual(saved_hotel.hotel_id, api_hotel.provider_place_id)
+            self.assertIsNone(saved_hotel.name)
+            self.assertIsNone(saved_hotel.address)
+            self.assertEqual(database.create_saved_hotel(saved_hotel), saved_hotel)
+            self.assertEqual(database.create_demo_hotel_night(night), night)
+            self.assertEqual(night.nightly_rate_cents, 10_000)
+            self.assertEqual(night.rooms_available, 20)
+
+            with self.assertRaises(DuplicateRecordError):
+                database.create_saved_hotel(saved_hotel)
+            with self.assertRaises(DuplicateRecordError):
+                database.create_demo_hotel_night(night)
+            with self.assertRaises(ReferencedRecordError):
+                database.create_demo_hotel_night(
+                    DemoHotelNight(
+                        hotel_id="missing-provider-id",
+                        stay_date=date(2026, 11, 11),
+                    )
+                )
+
+            updated_hotel = saved_hotel.model_copy(
+                update={"name": "Classroom Hotel", "address": "1 Demo Way"}
+            )
+            updated_night = night.model_copy(
+                update={"nightly_rate_cents": 12_500, "rooms_available": 7}
+            )
+            self.assertEqual(
+                database.update_saved_hotel(updated_hotel),
+                updated_hotel,
+            )
+            self.assertEqual(
+                database.update_demo_hotel_night(updated_night),
+                updated_night,
+            )
+
+            reopened = DatabaseController(database_path, seed_path=None)
+            reopened.initialize()
+            self.assertEqual(reopened.get_saved_hotel(saved_hotel.hotel_id), updated_hotel)
+            self.assertEqual(
+                reopened.get_demo_hotel_night(night.hotel_id, night.stay_date),
+                updated_night,
+            )
+            self.assertEqual(reopened.list_saved_hotels(), [updated_hotel])
+            self.assertEqual(reopened.list_demo_hotel_nights(), [updated_night])
+            self.assertEqual(reopened.check_references(), [])
+
+            with self.assertRaises(ReferencedRecordError):
+                reopened.delete_saved_hotel(saved_hotel.hotel_id)
+            reopened.delete_demo_hotel_night(night.hotel_id, night.stay_date)
+            reopened.delete_saved_hotel(saved_hotel.hotel_id)
+            self.assertEqual(reopened.list_demo_hotel_nights(), [])
+            self.assertEqual(reopened.list_saved_hotels(), [])
+
+    def test_schema_is_repeatable_and_enforces_defaults_and_checks(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            database = DatabaseController(
+                Path(temporary_directory) / "schema.db",
+                seed_path=None,
+            )
+            database.initialize()
+            database.initialize()
+
+            with database._connection() as connection:
+                columns = {
+                    row["name"]: row
+                    for row in connection.execute(
+                        "PRAGMA table_info(demo_hotel_nights)"
+                    ).fetchall()
+                }
+                primary_key = [
+                    row["name"]
+                    for row in sorted(columns.values(), key=lambda row: row["pk"])
+                    if row["pk"]
+                ]
+                foreign_keys = connection.execute(
+                    "PRAGMA foreign_key_list(demo_hotel_nights)"
+                ).fetchall()
+
+            self.assertEqual(columns["nightly_rate_cents"]["dflt_value"], "10000")
+            self.assertEqual(columns["rooms_available"]["dflt_value"], "20")
+            self.assertEqual(primary_key, ["hotel_id", "stay_date"])
+            self.assertTrue(
+                any(
+                    row["table"] == "saved_hotels"
+                    and row["from"] == "hotel_id"
+                    and row["to"] == "hotel_id"
+                    for row in foreign_keys
+                )
+            )
+
+            with self.assertRaises(sqlite3.IntegrityError):
+                with database._connection() as connection:
+                    connection.execute(
+                        "INSERT INTO saved_hotels "
+                        "(hotel_id, latitude, longitude) VALUES (?, ?, ?)",
+                        ("invalid-latitude", 91.0, 0.0),
+                    )
+
+            database.create_saved_hotel(
+                SavedHotel(
+                    hotel_id="valid-provider-id",
+                    latitude=40.8,
+                    longitude=-77.86,
+                )
+            )
+            with self.assertRaises(sqlite3.IntegrityError):
+                with database._connection() as connection:
+                    connection.execute(
+                        "INSERT INTO demo_hotel_nights "
+                        "(hotel_id, stay_date) VALUES (?, ?)",
+                        ("valid-provider-id", "2026-2-3"),
+                    )
+            with self.assertRaises(sqlite3.IntegrityError):
+                with database._connection() as connection:
+                    connection.execute(
+                        "INSERT INTO demo_hotel_nights "
+                        "(hotel_id, stay_date, nightly_rate_cents, rooms_available) "
+                        "VALUES (?, ?, ?, ?)",
+                        ("valid-provider-id", "2026-11-10", -1, 20),
+                    )
 
 
 class DatabaseApiContractTests(unittest.IsolatedAsyncioTestCase):

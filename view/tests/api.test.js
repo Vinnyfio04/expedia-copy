@@ -7,7 +7,10 @@ import {
   createBooking,
   fetchBookingHistory,
   fetchHotels,
+  removeSavedHotel,
+  saveHotelLocally,
   searchNearbyHotels,
+  searchSavedHotels,
   searchHotels,
 } from '../src/api.js'
 
@@ -71,6 +74,63 @@ test('searchNearbyHotels preserves backend status, code, and message', async (co
       return true
     },
   )
+})
+
+test('searchSavedHotels checks local results before provider search', async (context) => {
+  const result = {
+    requested_postcode: '02108',
+    center: null,
+    count: 0,
+    results: [],
+    saved_hotel_ids: ['geo-place-1'],
+  }
+  const fetchMock = context.mock.fn(async () => jsonResponse(result))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await searchSavedHotels('02108'), result)
+  assert.equal(
+    fetchMock.mock.calls[0].arguments[0],
+    '/api/hotels/saved?postcode=02108',
+  )
+})
+
+test('saveHotelLocally posts the hotel and resolved ZIP context', async (context) => {
+  const hotel = {
+    provider: 'geoapify',
+    provider_place_id: 'geo/place 1',
+    latitude: 40.8,
+    longitude: -77.86,
+  }
+  const searchLocation = {
+    postcode: '16802',
+    country_code: 'US',
+    latitude: 40.8,
+    longitude: -77.86,
+  }
+  const saved = { ...hotel, demo_nights: [] }
+  const fetchMock = context.mock.fn(async () => jsonResponse(saved))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await saveHotelLocally(hotel, searchLocation), saved)
+  assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/hotels/saved')
+  assert.deepEqual(fetchMock.mock.calls[0].arguments[1], {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hotel, search_location: searchLocation }),
+  })
+})
+
+test('removeSavedHotel deletes by encoded provider ID', async (context) => {
+  const result = { hotel_id: 'geo/place 1', removed: true }
+  const fetchMock = context.mock.fn(async () => jsonResponse(result))
+  globalThis.fetch = fetchMock
+
+  assert.deepEqual(await removeSavedHotel('geo/place 1'), result)
+  assert.equal(
+    fetchMock.mock.calls[0].arguments[0],
+    '/api/hotels/saved?hotel_id=geo%2Fplace%201',
+  )
+  assert.deepEqual(fetchMock.mock.calls[0].arguments[1], { method: 'DELETE' })
 })
 
 test('fetchBookingHistory requests the joined read-only history', async (context) => {
