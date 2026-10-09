@@ -116,7 +116,8 @@
   - If link does not work, it is located in docs/images as image #10
 
 ## Screen-recorded demo video
-- Video: https://drive.google.com/file/d/1m-oPW4leGcQG-WsqDb9cY-WHBdG7fjL-/view?usp=sharing
+- Part 1 Video: https://drive.google.com/file/d/1m-oPW4leGcQG-WsqDb9cY-WHBdG7fjL-/view?usp=sharing
+- Part 2 Video: https://drive.google.com/file/d/1rmwv8-Uf8qKz340-45Vh286RE0c8VrIN/view?usp=sharing
 
 ## Verification Record
 - ### Searching ZIP Code
@@ -143,6 +144,18 @@
   - <u>**Actual:**</u> What was expected, the list updated and the proper card was selected. The border of the card was active to show it was selected.
   - <u>**Corrections:**</u> No corrections needed.
   - <u>**Tested ZIP and Observation Date:**</u> ZIP: 16802, Observed 9/29 11:59 pm
+- ### Asking Chatbot to Compare Saved Hotels
+  - <u>**Input:**</u> Input a hotel question and hit send.
+  - <u>**Expected:**</u> The chatbot loads and displays an answer using the saved hotel data.
+  - <u>**Actual:**</u> What was expected, the chatbot loaded and displayed the cheapest saved hotels for the requested dates.
+  - <u>**Corrections:**</u> No corrections needed.
+  - <u>**Tested Question and Observation Date:**</u> Question: "Which of the saved hotels is cheapest from October 11th through October 13th?", Observed 10/8/2026
+- ### Asking Chatbot a Question Without Enough Data
+  - <u>**Input:**</u> Input a hotel question without enough saved data and hit send.
+  - <u>**Expected:**</u> The chatbot loads and informs me there is not enough data to answer the question.
+  - <u>**Actual:**</u> It gives me my list of saved hotels and says there is insufficient data with nightly rates since it cannot find dates in that range.
+  - <u>**Corrections:**</u> No correction needed since the application only has a specific timeframe for the hotel data..
+  - <u>**Tested Question and Observation Date:**</u> Question: "Which of the saved hotels is cheapest from November 3rd through November 5th?", 10/8/2026.
 
 ## AI Disclosure and Evidence Log
 - ### Tools Used
@@ -158,9 +171,13 @@
           - Bottom of the page
         - "change it to Expedia-copy"
           - Top left icon with application name
+        - "Change the current gemini model to a different version due to it being unavailable"
       - Verification
         - "Write a summary of all the changes made in this branch with a short explanation for each file. (File name - what was changed specifically). Report significant prompts in the /prompts folder. Make sure the appropriate docs are updated with the implemented MVC structure and the general folder structure."
+        - "Verify this plan follows requirements in docs, README, and AGENTS. Once verified, initiate the plan. Stop between each step so I can confirm the changes. Do checks at the end of each step, verifying that the implementation works as intended."
       - Decisions
         - "Thoroughly read handoffs/currend.md before taking any further action to fully understand this next step. Verify requirements in the /docs folder as well as README and AGENTS to ensure the next course of action follows what is stated. We are going to be implementing the zip code search and map implementation. Analyze the zip-search-mockup jpeg in images/. This is what the general layout of this feature will look. It will be located where ZIP lookup demonstration is located in the project as of now. It will be replacing the ZIP lookup. We will follow a clear pipeline to efficiently implement this feature with quality. Ensure to not over-engineer the process. The feature must align with the following workflow: User submits a ZIP code -> Vue validates the input -> the frontend sends the ZIP code to FastAPI -> FastAPI finds the ZIP code’s coordinates -> FastAPI requests hotels within 5 km -> the hotel data is returned to Vue -> Vue displays the hotels in a list and as markers on the Leaflet map -> selecting a hotel updates both the list and map. Generate a plan to follow these requirements. Do not change any files, I will give my go-ahead when I have reviewed it. The first step should be installing dependencies for the required tools for this feature. Ask questions to clarify ambiguity before planning if any appears."
+        - "Take this information and formulate a plan to implement these. Plan to do them in the order that makes the most sense for the application. Do not start the plan until I can verify it."
       - Revised Approach
         - "The implementation plan is approved in direction, but revise it with the following corrections before implementation. Do not change files until I explicitly give the go-ahead. [The rest of the prompt goes here, which was critiques on the suggested implementation plan, it was very long and weirdly formatted.]"
+        - "We will alter the frontend design for the chatbot feature. Rather than how it is now, it should be a popup in the bottom right corner of the screen. Clicking it opens the tab into a small window. The chat should always be in the bottom right of the screen, even while scrolling. The user should be able to send the message in there and see the chatlog grow with their message. It should be a standard professional AI chat window. The colors should match the expedia color scheme. Remove "ask about your saved hotels" once you verify the UI implementation is successful. Do not change any backend files, just change the frontend."

@@ -312,9 +312,12 @@ class HotelRagPlanningTests(unittest.IsolatedAsyncioTestCase):
             side_effect=[self.invalid_proposal, self.valid_proposal]
         )
 
-        with patch(
-            "app.hotel_rag.request_gemini_structured_output",
-            model_request,
+        with (
+            patch(
+                "app.hotel_rag.request_gemini_structured_output",
+                model_request,
+            ),
+            patch("builtins.print") as print_output,
         ):
             retrieval = await retrieve_hotel_rag_records(
                 "Show saved hotels.",
@@ -331,6 +334,20 @@ class HotelRagPlanningTests(unittest.IsolatedAsyncioTestCase):
             model_request.await_args_list[0].kwargs["system_instruction"],
             HOTEL_RAG_SQL_SYSTEM_INSTRUCTION,
         )
+        console_output = "\n".join(
+            call.args[0] for call in print_output.call_args_list
+        )
+        self.assertIn("[HOTEL RAG] Proposed SQL (attempt 1)", console_output)
+        self.assertIn('"sql": "UPDATE saved_hotels', console_output)
+        self.assertIn(
+            "[HOTEL RAG] Expected-versus-observed SQL safety verification",
+            console_output,
+        )
+        self.assertIn(
+            '"observed": "proposal rejected with query_not_read_only"',
+            console_output,
+        )
+        self.assertIn("[HOTEL RAG] Retrieved records", console_output)
 
     async def test_stops_after_one_repair_attempt(self) -> None:
         database = Mock(spec=DatabaseController)
@@ -488,6 +505,7 @@ class HotelRagGroundingTests(unittest.IsolatedAsyncioTestCase):
                 "app.hotel_rag.request_gemini_structured_output",
                 model_request,
             ),
+            patch("builtins.print") as print_output,
         ):
             response = await answer_hotel_rag_question(
                 "Where can I stay October 10 through October 12?"
@@ -504,6 +522,15 @@ class HotelRagGroundingTests(unittest.IsolatedAsyncioTestCase):
             model_request.await_args.kwargs["system_instruction"],
             HOTEL_RAG_ANSWER_SYSTEM_INSTRUCTION,
         )
+        transcript = print_output.call_args.args[0]
+        self.assertIn("=== HOTEL RAG WORKFLOW VERIFICATION ===", transcript)
+        self.assertIn('"question": "Where can I stay', transcript)
+        self.assertIn('"proposed_sql":', transcript)
+        self.assertIn('"retrieved_records":', transcript)
+        self.assertIn('"second_llm_request":', transcript)
+        self.assertIn('"displayed_answer":', transcript)
+        self.assertIn('"expected_vs_observed":', transcript)
+        self.assertIn('"result": "PASS"', transcript)
 
     async def test_empty_out_of_range_retrieval_reports_insufficient_data(self) -> None:
         retrieval = HotelRagRetrieval(

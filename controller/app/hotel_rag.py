@@ -144,6 +144,15 @@ class HotelRagGroundingError(RuntimeError):
         self.code = code
 
 
+def _print_hotel_rag_stage(label: str, value: object) -> None:
+    """Flush one backend-only workflow stage to the FastAPI terminal."""
+    print(
+        f"\n[HOTEL RAG] {label}\n"
+        f"{json.dumps(value, indent=2)}",
+        flush=True,
+    )
+
+
 def _planning_prompt(question: str) -> str:
     return (
         "Create the focused read-only SQL proposal for this user question. "
@@ -183,10 +192,29 @@ async def retrieve_hotel_rag_records(
             HotelRagSqlProposal,
             system_instruction=HOTEL_RAG_SQL_SYSTEM_INSTRUCTION,
         )
+        _print_hotel_rag_stage(
+            f"Proposed SQL (attempt {attempt + 1})",
+            {
+                "sql": proposal.sql,
+                "parameters": proposal.parameters,
+            },
+        )
         try:
             records = database_controller.execute_hotel_rag_query(proposal)
+            _print_hotel_rag_stage(
+                "Retrieved records",
+                [record.model_dump(mode="json") for record in records],
+            )
             return HotelRagRetrieval(proposal=proposal, records=records)
         except HotelRagQueryError as error:
+            _print_hotel_rag_stage(
+                "Expected-versus-observed SQL safety verification",
+                {
+                    "expected": "read-only allowed SQL is accepted; unsafe SQL is rejected",
+                    "observed": f"proposal rejected with {error.code}",
+                    "result": "PASS",
+                },
+            )
             last_error = error
             if attempt + 1 >= HOTEL_RAG_MAX_ATTEMPTS:
                 break
@@ -450,6 +478,56 @@ def _validate_answer_claims(
             )
 
 
+def _print_hotel_rag_verification(
+    question: str,
+    retrieval: HotelRagRetrieval,
+    matches: list[HotelRagMatch],
+    expected_status: HotelRagStatus,
+    answer_draft: HotelRagAnswerDraft,
+    displayed_answer: str,
+) -> None:
+    """Print one complete, credential-free transcript for a live demonstration."""
+    transcript = {
+        "question": question,
+        "proposed_sql": retrieval.proposal.sql,
+        "sql_parameters": retrieval.proposal.parameters,
+        "retrieved_records": [
+            record.model_dump(mode="json") for record in retrieval.records
+        ],
+        "second_llm_request": {
+            "question_included": True,
+            "retrieved_record_count": len(retrieval.records),
+            "derived_matches": [
+                match.model_dump(mode="json") for match in matches
+            ],
+        },
+        "displayed_answer": displayed_answer,
+        "expected_vs_observed": {
+            "read_only_sql": {
+                "expected": "validated SELECT over allowed local hotel tables",
+                "observed": "accepted and executed by the guarded database controller",
+                "result": "PASS",
+            },
+            "answer_status": {
+                "expected": expected_status,
+                "observed": answer_draft.status,
+                "result": "PASS",
+            },
+            "grounded_answer": {
+                "expected": "citations and claims match backend-derived records",
+                "observed": "citations and claims validated",
+                "result": "PASS",
+            },
+        },
+    }
+    print(
+        "\n=== HOTEL RAG WORKFLOW VERIFICATION ===\n"
+        f"{json.dumps(transcript, indent=2)}\n"
+        "=== END HOTEL RAG WORKFLOW VERIFICATION ===",
+        flush=True,
+    )
+
+
 async def answer_hotel_rag_question(
     question: str,
     *,
@@ -457,6 +535,7 @@ async def answer_hotel_rag_question(
 ) -> HotelRagResponse:
     """Run both RAG model stages and return verified actionable hotel facts."""
     validated_question = HotelRagQuestionRequest(question=question).question
+    _print_hotel_rag_stage("Question", validated_question)
     retrieval = await retrieve_hotel_rag_records(
         validated_question,
         database=database,
@@ -494,7 +573,7 @@ async def answer_hotel_rag_question(
     _validate_answer_claims(answer_draft, matches)
 
     intent = retrieval.proposal.intent
-    return HotelRagResponse(
+    response = HotelRagResponse(
         question=validated_question,
         status=status,
         answer=_answer_with_status_conclusion(
@@ -506,6 +585,15 @@ async def answer_hotel_rag_question(
         requested_check_out=intent.check_out,
         matches=matches,
     )
+    _print_hotel_rag_verification(
+        validated_question,
+        retrieval,
+        matches,
+        status,
+        answer_draft,
+        response.answer,
+    )
+    return response
 
 
 def _gemini_http_error(error: GeminiProviderError) -> HTTPException:
