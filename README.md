@@ -6,6 +6,7 @@
 
 ```text
 .
+|-- assignment_instructions.md  Saved Assignment 2 requirements reference
 |-- controller/       Controller: FastAPI routes, business logic, and persistence
 |   |-- app/
 |   |   |-- database.py       SQLite schema, initialization, and CRUD
@@ -18,6 +19,8 @@
 |   |   |-- geocoding.py      Strict U.S. ZIP resolution through Geoapify
 |   |   |-- nearby_hotels.py  Nearby Places request, normalization, and route
 |   |   |-- liteapi.py        Live rate lookup and conservative hotel matching
+|   |   |-- gemini.py         Backend-only structured-output LLM transport
+|   |   |-- hotel_rag.py      SQL planning, guarded retrieval, and chat route
 |   |   |-- saved_hotels.py   Local save, ZIP lookup, and removal routes
 |   |   `-- main.py           FastAPI application and startup lifecycle
 |   |-- tests/                Backend persistence, API, and provider tests
@@ -25,8 +28,9 @@
 |-- model/            Model data: seed.sql, ignored expedia.db, and relationship assets
 |-- view/             View: Vue screens, browser state, API client, and CSS
 |   |-- src/
-|   |   |-- components/       Booking, history, ZIP search, and Leaflet map
+|   |   |-- components/       Booking, chatbot, ZIP search, and Leaflet map
 |   |   |-- api.js            Browser-to-FastAPI JSON boundary
+|   |   |-- hotelChat.js      Chat validation and evidence formatting helpers
 |   |   |-- localHotels.js    Local-first nearby-hotel search coordination
 |   |   |-- postcode.js       Pure five-digit ZIP validation
 |   |   |-- App.vue           Top-level view coordination
@@ -102,7 +106,67 @@ helper's location. Restart the backend after editing `.env` so the running proce
 loads the updated configuration.
 
 `GET /api/health` reports whether the Geoapify and LiteAPI keys are configured
-without returning either value. Neither provider is called by the health check.
+and whether the Gemini key is configured without returning any value. No
+provider is called by the health check.
+
+The hotel RAG transport uses the Gemini Interactions API from the backend only.
+It defaults to the stable free-tier `gemini-3.1-flash-lite` model, selected for
+the low-latency bounded SQL-and-summary workflow, and requests
+schema-constrained JSON with minimal thinking without storing or chaining
+interactions.
+`GEMINI_MODEL` may override that default. The transport validates every response against the requested Pydantic
+contract and collapses provider, network, and malformed-response details into
+sanitized application errors. This transport never accesses SQLite; the RAG
+orchestrator passes its structured proposal to the guarded database controller
+and later supplies the verified records for answer generation through the
+implemented `POST /api/hotels/chat` route. Gemini's
+free tier may use submitted content to improve Google's products under the
+provider's current terms, so this coursework integration must send only the
+user's question and the fictional, bounded course data required for an answer.
+
+The first RAG stage gives Gemini only the three saved-hotel table definitions
+and strict query rules. Gemini proposes one parameterized read-only query;
+`database.py` opens the existing database in read-only/query-only mode and
+authorizes reads only from `saved_hotels`, `saved_hotel_locations`, and
+`demo_hotel_nights`. It rejects comments, multiple statements, mutations,
+PRAGMA, attachment, unapproved tables, functions, or result shapes. Execution
+has SQL-length, operation-count, and 100-row bounds. One rejected proposal may
+be returned to Gemini for correction using only a safe validation code. This
+planning stage never returns model-generated SQL or raw evidence to the View.
+
+After retrieval, the backend verifies that every returned hotel, location, and
+nightly value matches its actual SQLite relationship. Python then groups the
+verified rows, removes duplicate location/night evidence, applies the
+check-in-inclusive and checkout-exclusive interval, identifies missing nights,
+checks every night's room count, and sums complete-stay cost in cents. Missing
+nights never produce an availability claim or complete total. The original
+question, bounded verified records, and those derived facts are sent to Gemini
+in a separate structured-output request. The generated answer may cite only the
+hotel IDs in that context. It must also echo structured completeness,
+availability, missing-night, and total-cost claims for each cited hotel; the
+backend rejects the answer if any claim differs from its deterministic facts.
+The API-ready match objects retain the verified dates, costs, availability, and
+simulated-data notice. The HTTP endpoint and Vue presentation are documented
+below.
+
+The stateless saved-hotel question endpoint is:
+
+```text
+POST /api/hotels/chat
+Content-Type: application/json
+
+{"question":"Which saved hotel is available October 10 through October 12?"}
+```
+
+It returns the grounded answer, result status, interpreted stay dates, bounded
+matching hotel evidence, deterministic whole-stay totals/availability, and the
+simulated-course-data notice. It reads only saved local hotel records, never
+changes the database, and cannot make a booking. Expected Gemini failures are
+sanitized as `llm_not_configured` (503), `llm_rate_limited` (429), or
+`llm_unavailable` (502). Repeatedly unsafe SQL proposals and ungrounded answers
+return separate 502 errors without exposing proposed SQL, provider payloads, or
+credentials. The existing ZIP, list/map, and Add/Remove Local routes are
+unchanged.
 
 ### Live nearby-hotel contract
 
@@ -139,11 +203,13 @@ The root `.env` must define `GEOAPIFY_API_KEY` for live nearby-hotel searches:
 ```dotenv
 GEOAPIFY_API_KEY=your_geoapify_key
 LITEAPI_API_KEY=your_liteapi_sandbox_key
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
-Both keys remain backend-only. Vue calls FastAPI through the Vite `/api` proxy.
-Copy `.env.example` to `.env` for the expected variable names, keep the real
-values uncommitted, and restart FastAPI after changing them.
+All provider keys remain backend-only. Vue calls FastAPI through the Vite `/api`
+proxy. Copy `.env.example` to `.env` for the expected variable names, keep the
+real values uncommitted, and restart FastAPI after changing them.
 
 ### Date-specific nearby hotel rates
 
@@ -185,12 +251,23 @@ and availability are never overwritten by a repeated save. DELETE removes only
 the selected saved hotel, its ZIP associations, and its demo nights in one
 transaction.
 
+The saved lookup also returns the complete set of saved provider IDs. The View
+uses those IDs to restore accurate Add/Remove state after a page refresh without
+guessing from the currently displayed ZIP subset.
+
 The stays screen checks the local GET route first. Matching local hotels are
 shown with their stored map context and labeled as a saved subset, not a complete
 list for the area. Their $100.00 nightly rate and 20-room availability are
 explicitly labeled as simulated classroom data. Geoapify is called only after a
 successful local response containing no hotels; a failed local lookup does not
 fall through to the provider.
+
+`The hotel provider is unavailable.` means the Geoapify-backed nearby request
+could not complete because configuration, authentication, connectivity,
+timeout, or response validation failed. The application loads `.env` from the
+project root and keeps provider calls backend-only, but it does not hide a real
+external outage with invented results. Check `GET /api/health`, correct the root
+configuration when needed, restart FastAPI, and retry.
 
 ## View setup
 
@@ -211,6 +288,16 @@ nearby Geoapify matches, and a Leaflet map. One provider place ID synchronizes
 list-card and marker selection. A successful search with no matches still shows
 the resolved center with no hotel markers. LiteAPI rate enrichment is available
 through the backend route but is not displayed by the frontend.
+
+A fixed Hotel AI launcher in the lower-right corner opens a stateless chat
+window without changing the ZIP section. Each submitted question is sent to
+`POST /api/hotels/chat` and remains visible in the local chat log with its
+answer. The window displays loading and sanitized failure states; distinct
+answered, no-saved-match, and insufficient-nightly-data results; the interpreted
+stay interval; matching saved hotels; complete-stay total and availability;
+nightly evidence; and missing dates. Rates and room counts remain visibly
+labeled as simulated course data. The chatbot cannot change saved records or
+create bookings, and it does not alter the existing ZIP search behavior.
 
 The map uses the OpenStreetMap Standard HTTPS tile URL and visibly displays
 `© OpenStreetMap contributors`. Public OpenStreetMap tiles are appropriate for

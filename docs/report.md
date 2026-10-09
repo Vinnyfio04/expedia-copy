@@ -101,6 +101,15 @@
      - Geoapify Places Filters and Categories: https://apidocs.geoapify.com/docs/places/
      - Leaflet Documentation: https://leafletjs.com/reference.html
 
+  - ### Chatbot
+    - gemini-3.1-flash-lite
+      - #### Loading Interaction
+        - While the Chatbot is loading a response, it pops up with the "typing message" visual with three bouncing dots in a text bubble.
+      - #### Answer Interaction
+        - When the model sends a response, it is shown in a text bubble. Any hotels that match the question are displayed in the text bubble. Clicking them brings you to it's marker on the map to see the hotel data.
+      - #### No-Match Interaction
+        - A red text bubble appears in the response with the exact reasoning there is no match. If it is lacking data it will say there was no data for that field. If it is some other error, it will display that error as well.
+
 
 ## Early Mockup
 - GitHub link: https://github.com/Vinnyfio04/expedia-copy/blob/main/docs/images/10-zip-code-search-mockup.jpg

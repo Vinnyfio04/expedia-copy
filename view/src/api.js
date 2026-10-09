@@ -75,6 +75,16 @@ export async function removeSavedHotel(hotelId) {
   )
 }
 
+export async function askHotelQuestion(question) {
+  return requestJson('/hotels/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ question }),
+  })
+}
+
 export async function fetchBookingHistory() {
   return requestJson('/bookings/history')
 }

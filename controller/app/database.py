@@ -3,7 +3,9 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
+from math import isfinite
 from pathlib import Path
+import re
 import sqlite3
 from typing import Iterable, Iterator
 
@@ -11,6 +13,8 @@ from .models import (
     Booking,
     DemoHotelNight,
     Hotel,
+    HotelRagRetrievedRecord,
+    HotelRagSqlProposal,
     PostcodeLocation,
     SaveNearbyHotelRequest,
     SavedHotel,
@@ -28,6 +32,64 @@ DATABASE_PATH = DATA_DIRECTORY / "expedia.db"
 SEED_SQL_PATH = DATA_DIRECTORY / "seed.sql"
 SEED_VERSION = "initial_seed_v1"
 LEGACY_SEED_VERSION = "csv_seed_v1"
+HOTEL_RAG_RESULT_LIMIT = 100
+HOTEL_RAG_SQLITE_VALUE_LIMIT = 16_384
+HOTEL_RAG_CONTEXT_BYTES_LIMIT = 250_000
+HOTEL_RAG_SQLITE_OPERATION_LIMIT = 1_000_000
+HOTEL_RAG_PROGRESS_INTERVAL = 1_000
+HOTEL_RAG_EXPECTED_COLUMNS = (
+    "hotel_id",
+    "name",
+    "address",
+    "latitude",
+    "longitude",
+    "postcode",
+    "locality",
+    "distance_meters",
+    "stay_date",
+    "nightly_rate_cents",
+    "rooms_available",
+)
+HOTEL_RAG_ALLOWED_COLUMNS = {
+    "saved_hotels": {
+        "hotel_id",
+        "name",
+        "address",
+        "latitude",
+        "longitude",
+    },
+    "saved_hotel_locations": {
+        "hotel_id",
+        "postcode",
+        "country_code",
+        "search_latitude",
+        "search_longitude",
+        "locality",
+        "distance_meters",
+    },
+    "demo_hotel_nights": {
+        "hotel_id",
+        "stay_date",
+        "nightly_rate_cents",
+        "rooms_available",
+    },
+}
+HOTEL_RAG_ALLOWED_FUNCTIONS = {
+    "abs",
+    "avg",
+    "coalesce",
+    "count",
+    "date",
+    "like",
+    "lower",
+    "max",
+    "min",
+    "round",
+    "sum",
+    "total",
+    "upper",
+}
+HOTEL_RAG_QUERY_START = re.compile(r"^(?:SELECT|WITH)\b", re.IGNORECASE)
 
 
 SCHEMA_SQL = """
@@ -155,6 +217,14 @@ class RecordNotFoundError(DatabaseControllerError, LookupError):
     """Raised when an update or delete target does not exist."""
 
 
+class HotelRagQueryError(DatabaseControllerError):
+    """Raised when a proposed hotel RAG query is invalid or not allowed."""
+
+    def __init__(self, message: str, *, code: str = "invalid_query") -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class ReferenceViolation:
     """One row returned by SQLite's foreign-key reference check."""
@@ -201,6 +271,32 @@ class DatabaseController:
         except Exception:
             connection.rollback()
             raise
+        finally:
+            connection.close()
+
+    @contextmanager
+    def _read_only_connection(self) -> Iterator[sqlite3.Connection]:
+        """Open the existing SQLite database without initialization or writes."""
+        database_uri = f"{self.database_path.resolve().as_uri()}?mode=ro"
+        connection: sqlite3.Connection | None = None
+        try:
+            connection = sqlite3.connect(
+                database_uri,
+                uri=True,
+                timeout=5,
+            )
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA query_only = ON")
+        except sqlite3.Error:
+            if connection is not None:
+                connection.close()
+            raise DatabaseControllerError(
+                "Saved hotel data could not be opened."
+            ) from None
+
+        try:
+            yield connection
         finally:
             connection.close()
 
@@ -648,6 +744,209 @@ class DatabaseController:
             results=results,
             saved_hotel_ids=saved_hotel_ids,
         )
+
+    def execute_hotel_rag_query(
+        self,
+        proposal: HotelRagSqlProposal,
+    ) -> list[HotelRagRetrievedRecord]:
+        """Execute one bounded, authorized read-only query over saved hotel data."""
+        sql = proposal.sql.strip()
+        if (
+            HOTEL_RAG_QUERY_START.match(sql) is None
+            or "\x00" in sql
+            or ";" in sql
+            or "--" in sql
+            or "/*" in sql
+            or "*/" in sql
+        ):
+            raise HotelRagQueryError(
+                "The proposal must be one uncommented read-only SELECT statement.",
+                code="query_not_read_only",
+            )
+        if any(
+            isinstance(parameter, float) and not isfinite(parameter)
+            for parameter in proposal.parameters
+        ):
+            raise HotelRagQueryError(
+                "The proposal contains an invalid parameter.",
+                code="invalid_parameter",
+            )
+
+        bounded_sql = (
+            "SELECT * FROM ("
+            f"{sql}"
+            ") AS bounded_hotel_rag_results LIMIT ?"
+        )
+        maximum_progress_calls = (
+            HOTEL_RAG_SQLITE_OPERATION_LIMIT // HOTEL_RAG_PROGRESS_INTERVAL
+        )
+        progress_calls = 0
+
+        def stop_expensive_query() -> int:
+            nonlocal progress_calls
+            progress_calls += 1
+            return int(progress_calls > maximum_progress_calls)
+
+        def authorize(
+            action: int,
+            first_argument: str | None,
+            second_argument: str | None,
+            _database_name: str | None,
+            _trigger_name: str | None,
+        ) -> int:
+            if action == sqlite3.SQLITE_SELECT:
+                return sqlite3.SQLITE_OK
+            if action == sqlite3.SQLITE_READ:
+                allowed_columns = HOTEL_RAG_ALLOWED_COLUMNS.get(first_argument or "")
+                if allowed_columns is not None and second_argument in allowed_columns:
+                    return sqlite3.SQLITE_OK
+                return sqlite3.SQLITE_DENY
+            if action == sqlite3.SQLITE_FUNCTION:
+                function_name = (second_argument or "").casefold()
+                if function_name in HOTEL_RAG_ALLOWED_FUNCTIONS:
+                    return sqlite3.SQLITE_OK
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_DENY
+
+        with self._read_only_connection() as connection:
+            connection.setlimit(sqlite3.SQLITE_LIMIT_SQL_LENGTH, 5_000)
+            connection.setlimit(
+                sqlite3.SQLITE_LIMIT_LENGTH,
+                HOTEL_RAG_SQLITE_VALUE_LIMIT,
+            )
+            connection.set_authorizer(authorize)
+            connection.set_progress_handler(
+                stop_expensive_query,
+                HOTEL_RAG_PROGRESS_INTERVAL,
+            )
+            try:
+                cursor = connection.execute(
+                    bounded_sql,
+                    (*proposal.parameters, HOTEL_RAG_RESULT_LIMIT),
+                )
+                column_names = tuple(
+                    description[0] for description in cursor.description or ()
+                )
+                if column_names != HOTEL_RAG_EXPECTED_COLUMNS:
+                    raise HotelRagQueryError(
+                        "The proposal did not return the required hotel evidence fields.",
+                        code="invalid_result_shape",
+                    )
+                rows = cursor.fetchall()
+            except HotelRagQueryError:
+                raise
+            except sqlite3.DatabaseError as error:
+                code = (
+                    "query_too_complex"
+                    if "interrupted" in str(error).casefold()
+                    else "query_not_allowed_or_invalid"
+                )
+                raise HotelRagQueryError(
+                    "The proposed query could not be safely executed.",
+                    code=code,
+                ) from None
+            finally:
+                connection.set_authorizer(None)
+                connection.set_progress_handler(None, 0)
+
+        context_bytes = sum(
+            len(str(value).encode("utf-8"))
+            for row in rows
+            for value in row
+            if value is not None
+        )
+        if context_bytes > HOTEL_RAG_CONTEXT_BYTES_LIMIT:
+            raise HotelRagQueryError(
+                "The proposal returned too much hotel evidence.",
+                code="query_result_too_large",
+            )
+
+        try:
+            records = [HotelRagRetrievedRecord(**dict(row)) for row in rows]
+        except ValueError:
+            raise HotelRagQueryError(
+                "The proposal returned invalid hotel evidence.",
+                code="invalid_result_data",
+            ) from None
+        self._verify_hotel_rag_relationships(records)
+        return records
+
+    def _verify_hotel_rag_relationships(
+        self,
+        records: list[HotelRagRetrievedRecord],
+    ) -> None:
+        """Confirm proposed evidence values belong to their saved hotel keys."""
+        if not records:
+            return
+        hotel_ids = tuple(dict.fromkeys(record.hotel_id for record in records))
+        placeholders = ", ".join("?" for _hotel_id in hotel_ids)
+        with self._read_only_connection() as connection:
+            hotel_rows = connection.execute(
+                "SELECT hotel_id, name, address, latitude, longitude "
+                f"FROM saved_hotels WHERE hotel_id IN ({placeholders})",
+                hotel_ids,
+            ).fetchall()
+            location_rows = connection.execute(
+                "SELECT hotel_id, postcode, locality, distance_meters "
+                f"FROM saved_hotel_locations WHERE hotel_id IN ({placeholders})",
+                hotel_ids,
+            ).fetchall()
+            night_rows = connection.execute(
+                "SELECT hotel_id, stay_date, nightly_rate_cents, rooms_available "
+                f"FROM demo_hotel_nights WHERE hotel_id IN ({placeholders})",
+                hotel_ids,
+            ).fetchall()
+
+        hotels = {row["hotel_id"]: row for row in hotel_rows}
+        locations = {
+            (row["hotel_id"], row["postcode"]): row for row in location_rows
+        }
+        nights = {
+            (row["hotel_id"], row["stay_date"]): row for row in night_rows
+        }
+        for record in records:
+            hotel = hotels.get(record.hotel_id)
+            if hotel is None or (
+                record.name,
+                record.address,
+                record.latitude,
+                record.longitude,
+            ) != (
+                hotel["name"],
+                hotel["address"],
+                hotel["latitude"],
+                hotel["longitude"],
+            ):
+                raise HotelRagQueryError(
+                    "The proposal returned mismatched hotel evidence.",
+                    code="invalid_result_relationships",
+                )
+            if record.postcode is not None:
+                location = locations.get((record.hotel_id, record.postcode))
+                if location is None or (
+                    record.locality,
+                    record.distance_meters,
+                ) != (
+                    location["locality"],
+                    location["distance_meters"],
+                ):
+                    raise HotelRagQueryError(
+                        "The proposal returned mismatched location evidence.",
+                        code="invalid_result_relationships",
+                    )
+            if record.stay_date is not None:
+                night = nights.get((record.hotel_id, record.stay_date.isoformat()))
+                if night is None or (
+                    record.nightly_rate_cents,
+                    record.rooms_available,
+                ) != (
+                    night["nightly_rate_cents"],
+                    night["rooms_available"],
+                ):
+                    raise HotelRagQueryError(
+                        "The proposal returned mismatched nightly evidence.",
+                        code="invalid_result_relationships",
+                    )
 
     def delete_saved_hotel_with_related(self, hotel_id: str) -> None:
         """Atomically delete one saved hotel, its locations, and demo nights."""

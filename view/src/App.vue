@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { fetchHotels, searchHotels } from './api.js'
 import BookingHistory from './components/BookingHistory.vue'
 import BookingScreen from './components/BookingScreen.vue'
+import HotelChat from './components/HotelChat.vue'
 import NearbyHotelSearch from './components/NearbyHotelSearch.vue'
 import { getTopbarTravelAction } from './navigation.js'
 import { expediaHeaderLinks, travelProductLinks } from './travelLinks.js'
@@ -258,6 +259,7 @@ onMounted(() => loadHotels())
           <p>No hotels match that name. Try another search.</p>
         </div>
 
+        <HotelChat />
         <NearbyHotelSearch />
       </section>
     </template>

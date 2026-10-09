@@ -68,6 +68,52 @@ at Harbor Lantern Hotel (`H001`).
 Cancellation retains the booking row for history. Deletion removes it. New
 bookings receive new identifiers; existing identifiers remain stable.
 
+## Assignment 2 local hotel data
+
+The database controller creates three additional tables with additive,
+repeatable schema statements. They are intentionally absent from `seed.sql`, so
+an existing Assignment 1 database gains the schema without replaying the seed
+or changing the original records.
+
+### `saved_hotels`
+
+- `hotel_id`: the external API's `provider_place_id`, preserved exactly and used
+  as the primary key
+- `name`: nullable provider name
+- `address`: nullable provider formatted address
+- `latitude`: required finite value from -90 through 90
+- `longitude`: required finite value from -180 through 180
+
+Using the provider ID as the primary key prevents duplicate saved hotels.
+
+### `saved_hotel_locations`
+
+- associates a saved hotel with the five-digit ZIP where it was found
+- preserves the resolved search-center coordinates, optional locality, and
+  optional provider distance
+- uses `(hotel_id, postcode)` as its primary key
+- references `saved_hotels.hotel_id`
+
+This separate association lets one hotel retain more than one searched-location
+context without duplicating the hotel itself.
+
+### `demo_hotel_nights`
+
+- `hotel_id`: foreign key to `saved_hotels.hotel_id`
+- `stay_date`: ISO `YYYY-MM-DD` date
+- `nightly_rate_cents`: nonnegative integer with SQL default `10000`
+- `rooms_available`: nonnegative integer with SQL default `20`
+- `(hotel_id, stay_date)`: composite primary key
+
+The application creates missing rows for October 10–14, 2026 when a nearby
+hotel is saved. Repeated saves do not duplicate rows or overwrite existing rate
+or availability values. The $100.00 rate and 20-room count are fictional
+classroom defaults, not data from Geoapify or LiteAPI.
+
+The save workflow inserts the hotel, its ZIP association, and missing demo
+nights in one transaction. Removal deletes only that hotel's demo nights, ZIP
+associations, and saved row together while preserving unrelated records.
+
 ## Environment check
 
 SQLite is provided by Python's standard-library `sqlite3` module and does not
